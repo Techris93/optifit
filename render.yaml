@@ -1,0 +1,70 @@
+services:
+  - type: web
+    name: optifit-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /readyz
+    plan: starter
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.14.3
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
+        value: sqlite:////opt/render/project/data/optifit.db
+      - key: UPLOADS_DIR
+        value: /opt/render/project/data/uploads
+      - key: ENABLE_LOCAL_VISION
+        value: false
+      - key: ENABLE_OLLAMA
+        value: false
+      - key: ENABLE_GEMINI_WORKOUT
+        value: true
+      - key: GEMINI_WORKOUT_MODEL
+        value: gemini-2.5-flash
+      - key: GEMINI_WORKOUT_TIMEOUT_SECONDS
+        value: 60
+      - key: ALLOW_YOLO_FALLBACK_DOWNLOAD
+        value: false
+      - key: CLOUD_VISION_PROVIDER
+        value: gemini
+      - key: GEMINI_VISION_MODEL
+        value: gemini-2.5-flash
+      - key: CLOUD_VISION_TIMEOUT_SECONDS
+        value: 30
+      - key: LOG_LEVEL
+        value: INFO
+      - key: REQUIRE_AUTH_FOR_PROGRESS
+        value: true
+      - key: MAX_UPLOAD_BYTES
+        value: 8388608
+      - key: CORS_ORIGINS
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: GEMINI_API_KEY
+        sync: false
+    disk:
+      name: optifit-data
+      mountPath: /opt/render/project/data
+      sizeGB: 1
+
+  - type: web
+    name: optifit-web
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: NODE_VERSION
+        value: 20.11.0
+      - key: VITE_API_URL
+        sync: false
+      - key: VITE_ENABLE_ANALYZE
+        value: true

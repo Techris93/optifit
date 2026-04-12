@@ -1,0 +1,21 @@
+{
+  "appId": "dev.techris93.optifit",
+  "appName": "OptiFit",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#0f0f0f"
+    },
+    "Camera": {
+      "quality": 90,
+      "allowEditing": false,
+      "resultType": "base64",
+      "saveToGallery": false
+    }
+  }
+}

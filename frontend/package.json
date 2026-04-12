@@ -1,0 +1,47 @@
+{
+  "name": "optifit-frontend",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit \u0026\u0026 vite build",
+    "build:skip-check": "vite build",
+    "preview": "vite preview",
+    "sync": "cap sync",
+    "ios:open": "cap open ios",
+    "ios:run": "cap run ios",
+    "android:open": "cap open android",
+    "android:run": "cap run android"
+  },
+  "dependencies": {
+    "@capacitor/camera": "^6.0.0",
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/filesystem": "^6.0.0",
+    "@capacitor/preferences": "^6.0.0",
+    "@capacitor/splash-screen": "^6.0.0",
+    "@capacitor/status-bar": "^6.0.0",
+    "axios": "^1.6.0",
+    "lucide-react": "^0.294.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-dropzone": "^14.2.0",
+    "react-router-dom": "^6.20.0"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/cli": "^6.0.0",
+    "@capacitor/ios": "^6.0.0",
+    "@types/react": "^18.2.37",
+    "@types/react-dom": "^18.2.15",
+    "@vitejs/plugin-react": "^5.2.0",
+    "serve": "^14.2.0",
+    "typescript": "^5.2.2",
+    "vite": "^7.3.2",
+    "vite-plugin-pwa": "^1.2.0"
+  },
+  "overrides": {
+    "tar": "7.5.13",
+    "serialize-javascript": "7.0.5"
+  }
+}
