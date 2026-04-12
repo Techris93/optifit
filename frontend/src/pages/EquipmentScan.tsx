@@ -118,7 +118,7 @@ export default function EquipmentScan() {
                 {isDragActive ? <CheckCircle size={48} /> : <Camera size={48} />}
               </div>
               <p className="dropzone-text">
-                {isDragActive ? 'Drop files here' : 'Drag and drop photos or videos, or click to select'}
+                {isDragActive ? 'Drop files here' : 'Drag and drop, click to select, or take a photo/video'}
               </p>
               <p className="dropzone-meta">
                 Supports JPG, PNG, WEBP, MP4, MOV, and WEBM. Up to 5 files, 8 MB each.
