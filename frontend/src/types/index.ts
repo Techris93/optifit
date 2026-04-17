@@ -5,6 +5,8 @@ export interface DetectionResult {
   equipment_found: string[]
   annotated_image: string | null
   total_items: number
+  files_processed?: number
+  total_scans?: number
   detection_mode?: string
 }
 

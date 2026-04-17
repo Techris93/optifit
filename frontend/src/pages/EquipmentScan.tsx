@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { Camera, CheckCircle, Dumbbell, Image as ImageIcon, RefreshCw, Upload, Video } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import VisionStatusBadge from '../components/VisionStatusBadge'
 import { enableAnalyze } from '../config'
 import { detectEquipment, getHealthStatus } from '../utils/api'
 import type { DetectionResult, HealthStatus } from '../types'
 import scannerPreview from '../assets/stitch/ai_equipment_scanner_interface.jpg'
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
+const apiBaseUrl = apiUrl.endsWith('/api') ? apiUrl.slice(0, -4) : apiUrl
+const maxUploadSizeBytes = 8 * 1024 * 1024
 
 export default function EquipmentScan() {
   const [files, setFiles] = useState<File[]>([])
@@ -43,8 +46,19 @@ export default function EquipmentScan() {
       'image/*': ['.jpeg', '.jpg', '.png', '.webp'],
       'video/*': ['.mp4', '.mov', '.webm']
     },
-    maxFiles: 5
+    maxFiles: 5,
+    maxSize: maxUploadSizeBytes
   })
+
+  const workoutSearch = useMemo(() => {
+    const params = new URLSearchParams()
+    if (confirmedEquipment.length > 0) {
+      params.set('equipment', confirmedEquipment.join(','))
+    }
+    params.set('source', 'scan')
+    params.set('detection_mode', result?.detection_mode || health?.detection_mode || 'local')
+    return params.toString()
+  }, [confirmedEquipment, health?.detection_mode, result?.detection_mode])
 
   const handleScan = async () => {
     if (files.length === 0) return
@@ -78,16 +92,16 @@ export default function EquipmentScan() {
 
   if (!enableAnalyze) {
     return (
-      <div className="card">
-        <div className="card-title">Upload Analysis Unavailable</div>
-        <p>
-          This deployment is running in hosted web mode, so local-only upload analysis is disabled by default.
-        </p>
-        <a href="/workouts" className="btn btn-primary btn-large" style={{ marginTop: 16 }}>
-          Continue With Manual Equipment Picker
-        </a>
-      </div>
-    )
+        <div className="card">
+          <div className="card-title">Upload Analysis Unavailable</div>
+          <p>
+            This deployment is running in hosted web mode, so local-only upload analysis is disabled by default.
+          </p>
+          <Link to="/workouts" className="btn btn-primary btn-large" style={{ marginTop: 16 }}>
+            Continue With Manual Equipment Picker
+          </Link>
+        </div>
+      )
   }
 
   return (
@@ -138,10 +152,7 @@ export default function EquipmentScan() {
                         {file.type.startsWith('image/') ? (
                           <img src={url} alt={file.name} className="scan-preview-image" />
                         ) : (
-                          <div className="scan-preview-video">
-                            <Video size={18} />
-                            <span>Video</span>
-                          </div>
+                          <video className="scan-preview-video-player" src={url} controls muted preload="metadata" />
                         )}
                       </div>
                       <div className="scan-preview-copy">
@@ -173,7 +184,7 @@ export default function EquipmentScan() {
             </div>
 
             <button
-              className="btn btn-primary btn-large full-width mt-20"
+              className="btn btn-primary btn-large full-width top-gap-20"
               onClick={handleScan}
               disabled={files.length === 0 || loading}
             >
@@ -190,9 +201,9 @@ export default function EquipmentScan() {
               )}
             </button>
 
-            <a href="/workouts" className="btn btn-secondary btn-large full-width mt-12">
+            <Link to="/workouts" className="btn btn-secondary btn-large full-width top-gap-12">
               Skip Upload and Pick Equipment Manually
-            </a>
+            </Link>
           </div>
 
           <div className="card">
@@ -213,7 +224,11 @@ export default function EquipmentScan() {
               <CheckCircle size={32} color="var(--secondary)" />
             </div>
             <h2>Equipment Detected</h2>
-            <p className="muted-paragraph">Found {result.total_items} item(s). Review the list below and keep only the equipment that is actually available to you.</p>
+            <p className="muted-paragraph">
+              Found {result.total_items} item(s)
+              {result.files_processed && result.files_processed > 1 ? ` across ${result.files_processed} files` : ''}.
+              Review the list below and keep only the equipment that is actually available to you.
+            </p>
           </div>
 
           {result.annotated_image && (
@@ -256,12 +271,19 @@ export default function EquipmentScan() {
           </div>
 
           <div className="scan-result-actions">
-            <a
-              href={`/workouts?equipment=${confirmedEquipment.join(',')}&source=scan&detection_mode=${result.detection_mode || health?.detection_mode || 'local'}`}
+            <Link
+              to={`/workouts?${workoutSearch}`}
               className="btn btn-primary scan-generate-button"
+              aria-disabled={confirmedEquipment.length === 0}
+              onClick={(event) => {
+                if (confirmedEquipment.length === 0) {
+                  event.preventDefault()
+                  setError('Keep at least one confirmed equipment item before generating a workout.')
+                }
+              }}
             >
               Generate Workout
-            </a>
+            </Link>
             <button className="btn btn-secondary" onClick={handleReset}>
               Scan Again
             </button>

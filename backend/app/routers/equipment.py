@@ -1,3 +1,4 @@
+import logging
 import os
 import uuid
 from typing import List
@@ -11,6 +12,7 @@ from app.security import apply_rate_limit, save_upload_file
 from app.services.detection_service import EquipmentDetector
 
 router = APIRouter()
+logger = logging.getLogger("optifit.equipment")
 
 # Initialize detector
 detector = EquipmentDetector()
@@ -22,6 +24,65 @@ def ensure_local_vision_enabled() -> None:
             status_code=503,
             detail="Upload analysis is disabled in this environment. Use manual equipment selection instead."
         )
+
+
+IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp'}
+VIDEO_EXTENSIONS = {'.mp4', '.mov', '.webm'}
+ALLOWED_EXTENSIONS = IMAGE_EXTENSIONS | VIDEO_EXTENSIONS
+
+
+async def _detect_equipment_batch_files(
+    files: List[UploadFile],
+    confidence: float,
+):
+    all_detections = []
+    all_equipment = set()
+    processed_files = 0
+
+    for upload in files:
+        ext = os.path.splitext(upload.filename or "")[1].lower()
+        if ext not in IMAGE_EXTENSIONS:
+            continue
+
+        file_id = str(uuid.uuid4())
+        file_path = os.path.join(settings.uploads_equipment_dir, f"{file_id}{ext}")
+
+        os.makedirs(settings.uploads_equipment_dir, exist_ok=True)
+        await save_upload_file(upload, file_path, settings.max_upload_bytes, IMAGE_EXTENSIONS)
+
+        try:
+            detections = detector.detect(file_path, confidence_threshold=confidence)
+            all_detections.extend(detections)
+            all_equipment.update(d["label"] for d in detections)
+            processed_files += 1
+        except Exception:
+            logger.exception("batch_detection_failed filename=%s", upload.filename)
+
+    if processed_files == 0:
+        raise HTTPException(422, "Batch scan requires at least one supported image file.")
+
+    unique_equipment = {}
+    for det in all_detections:
+        label = det["label"]
+        if label not in unique_equipment or unique_equipment[label]["confidence"] < det["confidence"]:
+            unique_equipment[label] = det
+
+    unique_detections = sorted(
+        unique_equipment.values(),
+        key=lambda det: (-float(det.get("confidence", 0)), det.get("label", "")),
+    )
+
+    return {
+        "scan_id": str(uuid.uuid4()),
+        "filename": "batch_scan",
+        "detections": unique_detections,
+        "equipment_found": sorted(all_equipment),
+        "annotated_image": None,
+        "total_items": len(unique_detections),
+        "files_processed": processed_files,
+        "total_scans": len(files),
+        "detection_mode": detector.mode,
+    }
 
 @router.post("/detect")
 async def detect_equipment(
@@ -49,14 +110,17 @@ async def detect_equipment(
     )
 
     if len(uploads) > 1:
-        return await detect_equipment_batch(request, uploads, confidence)
+        if any(os.path.splitext(upload.filename or "")[1].lower() in VIDEO_EXTENSIONS for upload in uploads):
+            raise HTTPException(422, "Batch scan supports images only. Upload one video at a time.")
+        return await _detect_equipment_batch_files(uploads, confidence)
 
     upload = uploads[0]
 
-    allowed_extensions = {'.jpg', '.jpeg', '.png', '.mp4', '.mov', '.webm'}
-    ext = os.path.splitext(upload.filename)[1].lower()
-    if ext not in allowed_extensions:
+    ext = os.path.splitext(upload.filename or "")[1].lower()
+    if ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(400, f"Unsupported file type: {ext}")
+    if ext in VIDEO_EXTENSIONS and detector.mode != "local":
+        raise HTTPException(422, "Video analysis is only available in local vision mode. Upload photos instead.")
     
     # Save file
     file_id = str(uuid.uuid4())
@@ -64,7 +128,7 @@ async def detect_equipment(
     file_path = os.path.join(settings.uploads_equipment_dir, filename)
     
     os.makedirs(settings.uploads_equipment_dir, exist_ok=True)
-    await save_upload_file(upload, file_path, settings.max_upload_bytes, allowed_extensions)
+    await save_upload_file(upload, file_path, settings.max_upload_bytes, ALLOWED_EXTENSIONS)
     
     # Detect equipment
     try:
@@ -78,8 +142,11 @@ async def detect_equipment(
         if ext not in {'.mp4', '.mov', '.webm'}:
             annotated_path = detector.annotate_image(file_path, detections)
     
-    except Exception as e:
-        raise HTTPException(500, f"Detection failed: {str(e)}")
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("detection_failed filename=%s mode=%s", upload.filename, detector.mode)
+        raise HTTPException(500, "Detection failed. Please try again with a clearer image or switch to manual selection.")
     
     # Extract unique equipment names
     equipment_list = sorted(set(d["label"] for d in detections))
@@ -122,40 +189,10 @@ async def detect_equipment_batch(
         settings.detect_rate_limit_window_seconds,
     )
     
-    all_detections = []
-    all_equipment = set()
-    
-    for file in files:
-        ext = os.path.splitext(file.filename)[1].lower()
-        if ext not in {'.jpg', '.jpeg', '.png'}:
-            continue
-        
-        file_id = str(uuid.uuid4())
-        file_path = os.path.join(settings.uploads_equipment_dir, f"{file_id}{ext}")
-        
-        os.makedirs(settings.uploads_equipment_dir, exist_ok=True)
-        await save_upload_file(file, file_path, settings.max_upload_bytes, {'.jpg', '.jpeg', '.png'})
-        
-        try:
-            detections = detector.detect(file_path, confidence_threshold=confidence)
-            all_detections.extend(detections)
-            all_equipment.update(d["label"] for d in detections)
-        except Exception as e:
-            print(f"Failed to process {file.filename}: {e}")
-    
-    # Deduplicate by label, keeping highest confidence
-    unique_equipment = {}
-    for det in all_detections:
-        label = det["label"]
-        if label not in unique_equipment or unique_equipment[label]["confidence"] < det["confidence"]:
-            unique_equipment[label] = det
-    
-    return {
-        "equipment_found": sorted(all_equipment),
-        "unique_detections": list(unique_equipment.values()),
-        "total_scans": len(files),
-        "detection_mode": detector.mode,
-    }
+    if any(os.path.splitext(upload.filename or "")[1].lower() in VIDEO_EXTENSIONS for upload in files):
+        raise HTTPException(422, "Batch scan supports images only. Upload one video at a time.")
+
+    return await _detect_equipment_batch_files(files, confidence)
 
 @router.get("/equipment-types")
 async def get_equipment_types():

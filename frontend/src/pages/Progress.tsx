@@ -1,22 +1,30 @@
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
-import { Award, Calendar, TrendingUp } from 'lucide-react'
+import { Award, Calendar, Minus, Plus, TrendingUp } from 'lucide-react'
 import { getProgressHistory, logProgress, searchExercises } from '../utils/api'
 import type { Exercise, ProgressHistoryResponse } from '../types'
 import progressPreview from '../assets/stitch/progress_tracking_dashboard.jpg'
+
+type SetRow = {
+  reps: string
+  weight: string
+}
+
+const createSetRows = (count: number): SetRow[] =>
+  Array.from({ length: count }, () => ({ reps: '10', weight: '0' }))
 
 export default function Progress() {
   const [timeRange, setTimeRange] = useState('30')
   const [history, setHistory] = useState<ProgressHistoryResponse | null>(null)
   const [exerciseOptions, setExerciseOptions] = useState<Exercise[]>([])
   const [exerciseId, setExerciseId] = useState<number | ''>('')
-  const [sets, setSets] = useState(3)
-  const [reps, setReps] = useState('10,10,10')
-  const [weights, setWeights] = useState('0,0,0')
+  const [setRows, setSetRows] = useState<SetRow[]>(() => createSetRows(3))
+  const [weightUnit, setWeightUnit] = useState<'kg' | 'lbs'>('kg')
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   const loadHistory = async (days: number) => {
     setLoading(true)
@@ -55,26 +63,34 @@ export default function Progress() {
       return
     }
 
-    const repsPerSet = reps.split(',').map((item) => Number(item.trim())).filter((item) => !Number.isNaN(item))
-    const weightPerSet = weights.split(',').map((item) => Number(item.trim())).filter((item) => !Number.isNaN(item))
+    const repsPerSet = setRows.map((row) => Number(row.reps.trim()))
+    const weightPerSet = setRows.map((row) => Number(row.weight.trim()))
 
-    if (repsPerSet.length === 0 || weightPerSet.length === 0) {
-      setError('Enter comma-separated reps and weights, for example 10,10,8.')
+    if (
+      repsPerSet.length === 0 ||
+      weightPerSet.length === 0 ||
+      repsPerSet.some((item) => !Number.isFinite(item) || item <= 0) ||
+      weightPerSet.some((item) => !Number.isFinite(item) || item < 0)
+    ) {
+      setError('Enter valid reps and weight values for each set before saving.')
       return
     }
 
     setSubmitting(true)
     setError(null)
+    setSuccessMessage(null)
 
     try {
       await logProgress({
         exercise_id: Number(exerciseId),
-        sets_completed: sets,
+        sets_completed: setRows.length,
         reps_per_set: repsPerSet,
         weight_per_set: weightPerSet,
+        weight_unit: weightUnit,
         notes,
       })
       setNotes('')
+      setSuccessMessage('Session saved.')
       await loadHistory(Number(timeRange))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save progress')
@@ -84,6 +100,24 @@ export default function Progress() {
   }
 
   const latestEntries = history?.entries.slice(0, 5) ?? []
+  const consistencyRate = history?.consistency.consistency_percentage ?? 0
+
+  const updateSetRow = (index: number, field: keyof SetRow, value: string) => {
+    setSetRows((current) =>
+      current.map((row, rowIndex) => (rowIndex === index ? { ...row, [field]: value } : row))
+    )
+  }
+
+  const addSetRow = () => {
+    setSetRows((current) => {
+      const lastRow = current[current.length - 1]
+      return [...current, { reps: lastRow?.reps || '10', weight: lastRow?.weight || '0' }]
+    })
+  }
+
+  const removeSetRow = () => {
+    setSetRows((current) => (current.length > 1 ? current.slice(0, -1) : current))
+  }
 
   return (
     <div>
@@ -119,20 +153,59 @@ export default function Progress() {
             </select>
           </div>
           <div>
-            <label className="field-label">Sets completed</label>
-            <input className="field-control" type="number" min="1" value={sets} onChange={(event) => setSets(Number(event.target.value))} />
+            <label className="field-label">Weight unit</label>
+            <select className="field-control" value={weightUnit} onChange={(event) => setWeightUnit(event.target.value as 'kg' | 'lbs')}>
+              <option value="kg">kg</option>
+              <option value="lbs">lbs</option>
+            </select>
           </div>
         </div>
 
-        <div className="preference-grid top-gap-16">
-          <div>
-            <label className="field-label">Reps per set</label>
-            <input className="field-control" value={reps} onChange={(event) => setReps(event.target.value)} />
+        <div className="set-rows-header top-gap-16">
+          <label className="field-label zero-margin">Set details</label>
+          <div className="set-rows-actions">
+            <button type="button" className="mini-action-button" onClick={removeSetRow} disabled={setRows.length <= 1}>
+              <Minus size={14} />
+              Remove set
+            </button>
+            <button type="button" className="mini-action-button" onClick={addSetRow} disabled={setRows.length >= 12}>
+              <Plus size={14} />
+              Add set
+            </button>
           </div>
-          <div>
-            <label className="field-label">Weight per set</label>
-            <input className="field-control" value={weights} onChange={(event) => setWeights(event.target.value)} />
-          </div>
+        </div>
+
+        <div className="set-row-grid">
+          {setRows.map((row, index) => (
+            <div key={`set-row-${index}`} className="set-row-card">
+              <div className="set-row-index">Set {index + 1}</div>
+              <div className="set-row-fields">
+                <div>
+                  <label className="field-label">Reps</label>
+                  <input
+                    className="field-control"
+                    type="number"
+                    min="1"
+                    inputMode="numeric"
+                    value={row.reps}
+                    onChange={(event) => updateSetRow(index, 'reps', event.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="field-label">Weight ({weightUnit})</label>
+                  <input
+                    className="field-control"
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    inputMode="decimal"
+                    value={row.weight}
+                    onChange={(event) => updateSetRow(index, 'weight', event.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
 
         <div className="top-gap-16">
@@ -141,6 +214,7 @@ export default function Progress() {
         </div>
 
         {error && <div className="card error-card top-gap-16">{error}</div>}
+        {successMessage && <div className="card top-gap-16">{successMessage}</div>}
 
         <button type="button" className="btn btn-primary top-gap-16" onClick={submitLog} disabled={submitting}>
           {submitting ? 'Saving...' : 'Save Progress'}
@@ -152,6 +226,16 @@ export default function Progress() {
           <StatCard icon={<Calendar size={24} color="var(--primary)" />} value={history?.consistency.workouts_logged ?? 0} label="Logged Sessions" />
           <StatCard icon={<TrendingUp size={24} color="var(--secondary)" />} value={`${history?.total_volume.total_volume ?? 0} ${history?.total_volume.unit ?? 'kg'}`} label="Total Volume" />
           <StatCard icon={<Award size={24} color="var(--warning)" />} value={history?.consistency.unique_workout_days ?? 0} label="Active Days" />
+        </div>
+        <div className="progress-highlight-row">
+          <div className="progress-highlight-card">
+            <span>Consistency</span>
+            <strong>{consistencyRate}%</strong>
+          </div>
+          <div className="progress-highlight-card">
+            <span>Latest window</span>
+            <strong>{timeRange} days</strong>
+          </div>
         </div>
       </div>
 

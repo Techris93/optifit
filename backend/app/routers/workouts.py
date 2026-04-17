@@ -1,17 +1,20 @@
-from datetime import datetime
+from datetime import UTC, datetime
 import re
 from urllib.parse import quote_plus
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app.models.database import EquipmentType, Exercise, Workout, get_db, workout_exercises
+from app.models.database import EquipmentType, Exercise, User, Workout, get_db, workout_exercises
+from app.routers.auth import get_optional_current_user
 from app.services.workout_generator import WorkoutGenerator
 from app.services.exercise_media_service import exercise_media_service
 
 router = APIRouter()
+CLIENT_SESSION_HEADER = "x-client-session-id"
+CLIENT_SESSION_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{15,127}$")
 
 
 class WorkoutGenerateRequest(BaseModel):
@@ -38,6 +41,34 @@ class WorkoutSaveRequest(BaseModel):
     estimated_duration_minutes: int
     equipment_used: List[str]
     exercise_matches: List[WorkoutExerciseSave]
+
+
+def _get_client_session_id(request: Request) -> str | None:
+    session_id = request.headers.get(CLIENT_SESSION_HEADER, "").strip()
+    if not session_id:
+        return None
+    if not CLIENT_SESSION_PATTERN.fullmatch(session_id):
+        raise HTTPException(400, "Invalid client session identifier.")
+    return session_id
+
+
+def _require_workout_scope(request: Request, current_user: User | None) -> tuple[int | None, str | None]:
+    if current_user is not None:
+        return current_user.id, None
+
+    session_id = _get_client_session_id(request)
+    if session_id:
+        return None, session_id
+
+    raise HTTPException(401, "Authentication or a client session is required.")
+
+
+def _scoped_workout_query(db: Session, request: Request, current_user: User | None):
+    user_id, guest_session_id = _require_workout_scope(request, current_user)
+    query = db.query(Workout)
+    if user_id is not None:
+        return query.filter(Workout.user_id == user_id)
+    return query.filter(Workout.guest_session_id == guest_session_id)
 
 
 def _serialize_exercise(exercise: Exercise) -> dict:
@@ -336,7 +367,7 @@ async def generate_workout(
     return {
         "workout": workout_data,
         "exercise_matches": exercise_matches,
-        "generated_at": datetime.utcnow().isoformat() + "Z",
+        "generated_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         "equipment_used": payload.equipment,
         "ai_provider": workout_data.get("ai_provider", "template"),
         "generation_mode": workout_data.get("generation_mode", "template"),
@@ -344,10 +375,18 @@ async def generate_workout(
 
 
 @router.post("/save-generated")
-async def save_generated_workout(payload: WorkoutSaveRequest, db: Session = Depends(get_db)):
+async def save_generated_workout(
+    payload: WorkoutSaveRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_optional_current_user),
+):
     """Persist a generated workout and any matched exercise metadata."""
+    user_id, guest_session_id = _require_workout_scope(request, current_user)
 
     workout = Workout(
+        user_id=user_id,
+        guest_session_id=guest_session_id,
         name=payload.name,
         description=payload.description,
         goal=payload.goal,
@@ -360,6 +399,7 @@ async def save_generated_workout(payload: WorkoutSaveRequest, db: Session = Depe
     db.commit()
     db.refresh(workout)
 
+    saved_exercise_count = 0
     for order, match in enumerate(payload.exercise_matches):
         exercise = None
         if match.exercise_id:
@@ -379,6 +419,7 @@ async def save_generated_workout(payload: WorkoutSaveRequest, db: Session = Depe
                 order=order,
             )
         )
+        saved_exercise_count += 1
 
     db.commit()
 
@@ -390,26 +431,52 @@ async def save_generated_workout(payload: WorkoutSaveRequest, db: Session = Depe
         "difficulty": workout.difficulty,
         "estimated_duration_minutes": workout.estimated_duration_minutes,
         "equipment_used": workout.equipment_used,
-        "saved_exercise_count": len(payload.exercise_matches),
+        "saved_exercise_count": saved_exercise_count,
         "created_at": workout.created_at,
     }
 
 
 @router.get("/")
 async def get_workouts(
+    request: Request,
     skip: int = 0,
     limit: int = 20,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_optional_current_user),
 ):
     """List saved workouts."""
-    workouts = db.query(Workout).offset(skip).limit(limit).all()
+    workouts = _scoped_workout_query(db, request, current_user).offset(skip).limit(limit).all()
     return workouts
 
 
+@router.get("/templates/community")
+async def get_community_templates(
+    equipment: Optional[List[str]] = None,
+    goal: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """Get community-created workout templates."""
+    query = db.query(Workout).filter(Workout.is_template == True)
+
+    if goal:
+        query = query.filter(Workout.goal == goal)
+
+    if equipment:
+        query = query.filter(Workout.equipment_used.is_not(None))
+
+    templates = query.limit(20).all()
+    return templates
+
+
 @router.get("/{workout_id}")
-async def get_workout(workout_id: int, db: Session = Depends(get_db)):
+async def get_workout(
+    workout_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_optional_current_user),
+):
     """Get a specific workout with enriched exercise data."""
-    workout = db.query(Workout).filter(Workout.id == workout_id).first()
+    workout = _scoped_workout_query(db, request, current_user).filter(Workout.id == workout_id).first()
     if not workout:
         raise HTTPException(404, "Workout not found")
 
@@ -433,31 +500,17 @@ async def get_workout(workout_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/{workout_id}/save")
-async def save_workout(workout_id: int, db: Session = Depends(get_db)):
+async def save_workout(
+    workout_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_optional_current_user),
+):
     """Save a generated workout to user's profile."""
-    workout = db.query(Workout).filter(Workout.id == workout_id).first()
+    workout = _scoped_workout_query(db, request, current_user).filter(Workout.id == workout_id).first()
     if not workout:
         raise HTTPException(404, "Workout not found")
     return {"message": "Workout is already stored", "workout_id": workout.id}
-
-
-@router.get("/templates/community")
-async def get_community_templates(
-    equipment: Optional[List[str]] = None,
-    goal: Optional[str] = None,
-    db: Session = Depends(get_db)
-):
-    """Get community-created workout templates."""
-    query = db.query(Workout).filter(Workout.is_template == True)
-
-    if goal:
-        query = query.filter(Workout.goal == goal)
-
-    if equipment:
-        query = query.filter(Workout.equipment_used.is_not(None))
-
-    templates = query.limit(20).all()
-    return templates
 
 
 @router.get("/exercises/{exercise_slug}/media")

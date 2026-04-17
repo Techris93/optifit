@@ -9,7 +9,7 @@ from sqlalchemy.orm import sessionmaker
 os.environ.setdefault("DATABASE_URL", "sqlite:///./optifit_test_bootstrap.db")
 
 from app.main import app
-from app.models.database import Base, Exercise, EquipmentType, get_db
+from app.models.database import Base, Exercise, EquipmentType, Workout, get_db
 from app.security import rate_limiter
 
 
@@ -64,6 +64,17 @@ def client(tmp_path: Path):
         equipment=[dumbbell],
     )
     db.add_all([dumbbell, mat, pushups, rows])
+    db.add(
+        Workout(
+            name="Community Dumbbell Starter",
+            description="Template workout for route verification.",
+            goal="strength",
+            difficulty="beginner",
+            estimated_duration_minutes=35,
+            equipment_used=["dumbbell"],
+            is_template=True,
+        )
+    )
     db.commit()
     db.close()
 

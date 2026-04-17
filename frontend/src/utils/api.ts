@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { enableAnalyze } from '../config'
 import type { HealthStatus, WorkoutExerciseMatch, UserPreferences } from '../types'
+import { getAccessToken, getOrCreateClientSessionId } from './session'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
 
@@ -9,6 +10,20 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json'
   }
+})
+
+api.interceptors.request.use((config) => {
+  const headers = config.headers ?? {}
+  const token = getAccessToken()
+  const clientSessionId = getOrCreateClientSessionId()
+
+  headers['x-client-session-id'] = clientSessionId
+  if (token) {
+    headers.Authorization = `Bearer ${token}`
+  }
+
+  config.headers = headers
+  return config
 })
 
 // Equipment detection
@@ -60,6 +75,11 @@ export const saveGeneratedWorkout = async (payload: {
   exercise_matches: WorkoutExerciseMatch[]
 }) => {
   const { data } = await api.post('/workouts/save-generated', payload)
+  return data
+}
+
+export const getSavedWorkouts = async () => {
+  const { data } = await api.get('/workouts/')
   return data
 }
 

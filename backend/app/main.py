@@ -7,7 +7,7 @@ import uuid
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import text
+from sqlalchemy import inspect, text
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.config import settings
@@ -23,8 +23,18 @@ logger = logging.getLogger("optifit.api")
 async def lifespan(_app: FastAPI):
     # Keep table bootstrap for MVP environments that do not run migrations yet.
     Base.metadata.create_all(bind=engine)
+    reconcile_runtime_schema()
     validate_runtime_security()
     yield
+
+
+def reconcile_runtime_schema() -> None:
+    inspector = inspect(engine)
+    workout_columns = {column["name"] for column in inspector.get_columns("workouts")}
+
+    if "guest_session_id" not in workout_columns:
+        with engine.begin() as connection:
+            connection.execute(text("ALTER TABLE workouts ADD COLUMN guest_session_id VARCHAR"))
 
 app = FastAPI(
     title="OptiFit API",

@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { ArrowRight, Camera, Dumbbell, Sparkles, Video } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import ExerciseAnimationCard from '../components/animation/ExerciseAnimationCard'
 import { enableAnalyze } from '../config'
+import { getExerciseAnimationProfile } from '../data/exerciseAnimations'
 import VisionStatusBadge from '../components/VisionStatusBadge'
 import type { HealthStatus } from '../types'
 import { getHealthStatus } from '../utils/api'
@@ -37,6 +39,33 @@ const steps = [
   }
 ]
 
+const launchpads = [
+  {
+    title: 'Analyze Your Space',
+    description: 'Capture the equipment in front of you and review what the scanner finds before planning.',
+    route: enableAnalyze ? '/analyze' : '/workouts',
+    cta: enableAnalyze ? 'Open scanner' : 'Open builder'
+  },
+  {
+    title: 'Build A Session',
+    description: 'Choose gear, training goal, and duration to get a session you can run immediately.',
+    route: '/workouts',
+    cta: 'Generate workout'
+  },
+  {
+    title: 'Browse The Library',
+    description: 'Search exercises, open demo media, and review instructions without leaving the app.',
+    route: '/exercises',
+    cta: 'Explore exercises'
+  },
+  {
+    title: 'Track Progress',
+    description: 'Log completed sets, monitor recent activity, and keep progression measurable over time.',
+    route: '/progress',
+    cta: 'Open progress'
+  }
+]
+
 const redesignScreens = [
   { title: 'AI Scanner', copy: 'Live equipment detection view with confidence tags.', image: scannerRedesign },
   { title: 'Manual Selection', copy: 'Fast fallback equipment picker with instant toggles.', image: manualSelectionRedesign },
@@ -49,6 +78,7 @@ const redesignScreens = [
 
 export default function Home() {
   const [health, setHealth] = useState<HealthStatus | null>(null)
+  const featuredAnimation = getExerciseAnimationProfile('push_ups')
 
   useEffect(() => {
     getHealthStatus().then(setHealth).catch(() => undefined)
@@ -93,6 +123,24 @@ export default function Home() {
       </section>
 
       <section className="card">
+        <div className="card-title">Launchpads</div>
+        <div className="launchpad-grid">
+          {launchpads.map((item) => (
+            <Link key={item.title} to={item.route} className="launchpad-card">
+              <div>
+                <h3>{item.title}</h3>
+                <p>{item.description}</p>
+              </div>
+              <span className="launchpad-link">
+                {item.cta}
+                <ArrowRight size={16} />
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section className="card">
         <div className="card-title">Core Flow</div>
         <div className="step-grid">
           {steps.map(({ icon: Icon, title, text }) => (
@@ -117,6 +165,13 @@ export default function Home() {
           {!enableAnalyze && <div><strong>Manual mode:</strong> this deployment hides scan analysis and starts from equipment selection</div>}
         </div>
       </section>
+
+      {featuredAnimation && (
+        <section className="card">
+          <div className="card-title">Animation-Ready Exercise Card</div>
+          <ExerciseAnimationCard profile={featuredAnimation} />
+        </section>
+      )}
 
       <section className="card">
         <div className="card-title">Stitch Redesign Preview</div>

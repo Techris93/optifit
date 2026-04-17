@@ -107,7 +107,7 @@ def calculate_total_volume(entries: List[ProgressEntry]) -> dict:
 def calculate_consistency(entries: List[ProgressEntry], days: int) -> dict:
     """Calculate workout consistency."""
     if not entries:
-        return {"workouts_logged": 0, "consistency_percentage": 0}
+        return {"workouts_logged": 0, "unique_workout_days": 0, "consistency_percentage": 0}
     
     unique_days = len(set(e.created_at.date() for e in entries))
     

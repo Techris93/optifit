@@ -114,11 +114,11 @@ export default function WorkoutGenerator() {
       {!result ? (
         <>
           <div className="card">
-            <div className="card-title">1. Pick Your Equipment</div>
+          <div className="card-title">1. Pick Your Equipment</div>
             <p className="muted-paragraph">
               {source === 'scan'
                 ? 'These selections came from your upload scan. Confirm or edit them before generating the workout.'
-                : 'This is the fastest path to a functional web app. The upload-and-analyze flow can feed into this same screen later.'}
+                : 'Choose the equipment you can actually use right now. The workout plan will only be built from this list.'}
             </p>
 
             <div className="equipment-tags">
@@ -131,6 +131,11 @@ export default function WorkoutGenerator() {
                   </button>
                 ))
               )}
+            </div>
+
+            <div className="selection-summary-card">
+              <span>Selected equipment</span>
+              <strong>{equipment.length}</strong>
             </div>
 
             <div className="category-grid">

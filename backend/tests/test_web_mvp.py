@@ -4,6 +4,8 @@ from app.config import settings
 from app.routers.equipment import detector
 from app.security import rate_limiter
 
+CLIENT_SESSION_HEADERS = {"x-client-session-id": "guest-session-test-0001"}
+
 
 def test_health_endpoint(client):
     response = client.get("/health")
@@ -72,16 +74,101 @@ def test_save_generated_workout_persists_record(client):
             "equipment_used": generated_payload["equipment_used"],
             "exercise_matches": generated_payload["exercise_matches"],
         },
+        headers=CLIENT_SESSION_HEADERS,
     )
     assert save_response.status_code == 200
     saved = save_response.json()
     assert saved["id"] > 0
     assert saved["saved_exercise_count"] == len(generated_payload["exercise_matches"])
 
-    workouts_response = client.get("/api/workouts/")
+    workouts_response = client.get("/api/workouts/", headers=CLIENT_SESSION_HEADERS)
     assert workouts_response.status_code == 200
     workouts = workouts_response.json()
     assert any(workout["id"] == saved["id"] for workout in workouts)
+
+
+def test_save_generated_workout_reports_inserted_exercise_count(client):
+    save_response = client.post(
+        "/api/workouts/save-generated",
+        json={
+            "name": "Mixed Save",
+            "description": "Includes one invalid exercise slug",
+            "goal": "strength",
+            "difficulty": "beginner",
+            "estimated_duration_minutes": 30,
+            "equipment_used": ["dumbbell"],
+            "exercise_matches": [
+                {
+                    "exercise_id": 2,
+                    "slug": "dumbbell_rows",
+                    "sets": 3,
+                    "reps": "10-12",
+                    "rest_seconds": 60,
+                },
+                {
+                    "slug": "missing_exercise_slug",
+                    "sets": 3,
+                    "reps": "10-12",
+                    "rest_seconds": 60,
+                },
+            ],
+        },
+        headers=CLIENT_SESSION_HEADERS,
+    )
+    assert save_response.status_code == 200
+    payload = save_response.json()
+    assert payload["saved_exercise_count"] == 1
+
+
+def test_saved_workouts_require_auth_or_client_session(client):
+    response = client.get("/api/workouts/")
+    assert response.status_code == 401
+
+
+def test_guest_workout_scope_isolated_by_client_session(client):
+    first_session = {"x-client-session-id": "guest-session-test-0001"}
+    second_session = {"x-client-session-id": "guest-session-test-0002"}
+
+    first_save = client.post(
+        "/api/workouts/save-generated",
+        json={
+            "name": "Guest One Workout",
+            "description": "Scoped to first guest session",
+            "goal": "strength",
+            "difficulty": "beginner",
+            "estimated_duration_minutes": 30,
+            "equipment_used": ["dumbbell"],
+            "exercise_matches": [
+                {
+                    "exercise_id": 2,
+                    "slug": "dumbbell_rows",
+                    "sets": 3,
+                    "reps": "10-12",
+                    "rest_seconds": 60,
+                }
+            ],
+        },
+        headers=first_session,
+    )
+    assert first_save.status_code == 200
+    workout_id = first_save.json()["id"]
+
+    first_list = client.get("/api/workouts/", headers=first_session)
+    second_list = client.get("/api/workouts/", headers=second_session)
+    assert first_list.status_code == 200
+    assert second_list.status_code == 200
+    assert any(workout["id"] == workout_id for workout in first_list.json())
+    assert all(workout["id"] != workout_id for workout in second_list.json())
+
+    second_detail = client.get(f"/api/workouts/{workout_id}", headers=second_session)
+    assert second_detail.status_code == 404
+
+
+def test_community_templates_route_remains_reachable(client):
+    response = client.get("/api/workouts/templates/community")
+    assert response.status_code == 200
+    payload = response.json()
+    assert any(template["name"] == "Community Dumbbell Starter" for template in payload)
 
 
 def test_progress_logging_and_history(client):
@@ -148,6 +235,66 @@ def test_cloud_vision_detection_path(client, monkeypatch):
     assert payload["equipment_found"] == ["bench", "dumbbell"]
     assert payload["annotated_image"] is None
     assert payload["detection_mode"] == "gemini"
+
+
+def test_multi_file_detection_returns_consistent_shape(client, monkeypatch):
+    original_provider = settings.cloud_vision_provider
+    original_local_vision = settings.enable_local_vision
+
+    try:
+        settings.cloud_vision_provider = "gemini"
+        settings.enable_local_vision = False
+
+        monkeypatch.setattr(
+            detector,
+            "detect",
+            lambda *_args, **_kwargs: [
+                {"label": "dumbbell", "confidence": 0.94, "bbox": [], "class_id": None},
+                {"label": "bench", "confidence": 0.83, "bbox": [], "class_id": None},
+            ],
+        )
+
+        response = client.post(
+            "/api/equipment/detect",
+            files=[
+                ("files", ("gym-a.jpg", io.BytesIO(b"fake-image-a"), "image/jpeg")),
+                ("files", ("gym-b.png", io.BytesIO(b"fake-image-b"), "image/png")),
+            ],
+            data={"confidence": "0.5"},
+        )
+    finally:
+        settings.cloud_vision_provider = original_provider
+        settings.enable_local_vision = original_local_vision
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["filename"] == "batch_scan"
+    assert payload["annotated_image"] is None
+    assert payload["total_items"] == 2
+    assert payload["equipment_found"] == ["bench", "dumbbell"]
+    assert len(payload["detections"]) == 2
+    assert payload["files_processed"] == 2
+
+
+def test_cloud_video_detection_rejected_cleanly(client):
+    original_provider = settings.cloud_vision_provider
+    original_local_vision = settings.enable_local_vision
+
+    try:
+        settings.cloud_vision_provider = "gemini"
+        settings.enable_local_vision = False
+
+        response = client.post(
+            "/api/equipment/detect",
+            files={"file": ("gym.mp4", io.BytesIO(b"fake-video"), "video/mp4")},
+            data={"confidence": "0.5"},
+        )
+    finally:
+        settings.cloud_vision_provider = original_provider
+        settings.enable_local_vision = original_local_vision
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Video analysis is only available in local vision mode. Upload photos instead."
 
 
 def test_login_rate_limit(client):

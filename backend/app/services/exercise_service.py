@@ -49,13 +49,20 @@ class ExerciseService:
         
         if query:
             q = q.filter(Exercise.name.ilike(f"%{query}%"))
-        if muscle_group:
-            q = q.filter(Exercise.muscle_groups.contains(muscle_group))
         if equipment:
             q = q.join(ExerciseEquipment).join(EquipmentType).filter(
                 EquipmentType.name == equipment
             )
         if difficulty:
             q = q.filter(Exercise.difficulty == difficulty)
-            
-        return q.all()
+
+        exercises = q.all()
+
+        if muscle_group:
+            exercises = [
+                exercise
+                for exercise in exercises
+                if muscle_group in (exercise.muscle_groups or [])
+            ]
+
+        return exercises

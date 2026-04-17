@@ -116,6 +116,7 @@ class Workout(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
+    guest_session_id = Column(String, index=True, nullable=True)
     name = Column(String)
     description = Column(Text)
     goal = Column(String)

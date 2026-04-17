@@ -1,7 +1,9 @@
 import type { FormEvent } from 'react'
 import { useEffect, useState } from 'react'
 import { Dumbbell, Info, Search } from 'lucide-react'
+import ExerciseAnimationCard from '../components/animation/ExerciseAnimationCard'
 import ExerciseMediaPreview from '../components/ExerciseMediaPreview'
+import { getExerciseAnimationProfile } from '../data/exerciseAnimations'
 import { getMuscleGroups, searchExercises } from '../utils/api'
 import type { Exercise } from '../types'
 import libraryPreview from '../assets/stitch/exercise_library_screen.jpg'
@@ -13,11 +15,15 @@ export default function ExerciseLibrary() {
   const [muscleGroup, setMuscleGroup] = useState('')
   const [difficulty, setDifficulty] = useState('')
   const [muscleGroups, setMuscleGroups] = useState<string[]>([])
+  const [expandedExerciseId, setExpandedExerciseId] = useState<number | null>(null)
+
+  useEffect(() => {
+    void loadMuscleGroups()
+  }, [])
 
   useEffect(() => {
     void loadExercises()
-    void loadMuscleGroups()
-  }, [])
+  }, [muscleGroup, difficulty])
 
   const loadExercises = async () => {
     setLoading(true)
@@ -114,50 +120,107 @@ export default function ExerciseLibrary() {
           <p className="helper-text mb-16">Showing {exercises.length} exercises</p>
 
           {exercises.map((exercise) => (
-            <div key={exercise.id} className="exercise-card">
-              <div className="exercise-layout">
-                <ExerciseMediaPreview exercise={exercise} title={exercise.name} />
-
-                <div className="exercise-body">
-                  <div className="exercise-header">
-                    <div>
-                      <div className="exercise-name">
-                        <Dumbbell size={16} className="inline-icon" />
-                        {exercise.name}
-                      </div>
-                      <div className="exercise-type-row">
-                        <span className="exercise-difficulty">{exercise.difficulty}</span>
-                        <span>•</span>
-                        <span>{exercise.exercise_type}</span>
-                      </div>
-                    </div>
-
-                    <button type="button" className="icon-button">
-                      <Info size={20} color="var(--text-muted)" />
-                    </button>
-                  </div>
-
-                  {exercise.description && (
-                    <p className="muted-paragraph top-gap-8">
-                      {exercise.description}
-                    </p>
-                  )}
-
-                  {exercise.muscle_groups && exercise.muscle_groups.length > 0 && (
-                    <div className="muscle-chip-row">
-                      {exercise.muscle_groups.map((muscle) => (
-                        <span key={muscle} className="muscle-chip">
-                          {muscle.replace('_', ' ')}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+            <ExerciseLibraryCard
+              key={exercise.id}
+              exercise={exercise}
+              expanded={expandedExerciseId === exercise.id}
+              onToggle={() => setExpandedExerciseId((current) => current === exercise.id ? null : exercise.id)}
+            />
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+type ExerciseLibraryCardProps = {
+  exercise: Exercise
+  expanded: boolean
+  onToggle: () => void
+}
+
+function ExerciseLibraryCard({ exercise, expanded, onToggle }: ExerciseLibraryCardProps) {
+  const animationProfile = getExerciseAnimationProfile(exercise.slug)
+
+  return (
+    <div className="exercise-card">
+      <div className="exercise-layout">
+        <ExerciseMediaPreview exercise={exercise} title={exercise.name} />
+
+        <div className="exercise-body">
+          <div className="exercise-header">
+            <div>
+              <div className="exercise-name">
+                <Dumbbell size={16} className="inline-icon" />
+                {exercise.name}
+              </div>
+              <div className="exercise-type-row">
+                <span className="exercise-difficulty">{exercise.difficulty}</span>
+                <span>•</span>
+                <span>{exercise.exercise_type}</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className="icon-button exercise-detail-button"
+              onClick={onToggle}
+              aria-expanded={expanded}
+            >
+              <Info size={20} color="var(--text-muted)" />
+              <span>{expanded ? 'Hide details' : 'Details'}</span>
+            </button>
+          </div>
+
+          {exercise.description && (
+            <p className="muted-paragraph top-gap-8">
+              {exercise.description}
+            </p>
+          )}
+
+          {exercise.muscle_groups && exercise.muscle_groups.length > 0 && (
+            <div className="muscle-chip-row">
+              {exercise.muscle_groups.map((muscle) => (
+                <span key={muscle} className="muscle-chip">
+                  {muscle.replace('_', ' ')}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {expanded && (
+            <div className="exercise-detail-panel">
+              {animationProfile && (
+                <ExerciseAnimationCard profile={animationProfile} />
+              )}
+              {exercise.instructions && (
+                <div>
+                  <strong>How to do it</strong>
+                  <p className="muted-paragraph top-gap-8">{exercise.instructions}</p>
+                </div>
+              )}
+              {exercise.tips && (
+                <div>
+                  <strong>Coach notes</strong>
+                  <p className="muted-paragraph top-gap-8">{exercise.tips}</p>
+                </div>
+              )}
+              {exercise.equipment && exercise.equipment.length > 0 && (
+                <div>
+                  <strong>Equipment</strong>
+                  <div className="muscle-chip-row top-gap-8">
+                    {exercise.equipment.map((item) => (
+                      <span key={item.id} className="muscle-chip">
+                        {item.display_name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

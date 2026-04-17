@@ -1,7 +1,9 @@
 import base64
 import json
+import logging
 import os
 import re
+import tempfile
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -18,6 +20,9 @@ try:
     YOLO_AVAILABLE = True
 except ImportError:
     YOLO_AVAILABLE = False
+
+
+logger = logging.getLogger("optifit.detection")
 
 
 class EquipmentDetector:
@@ -231,20 +236,31 @@ class EquipmentDetector:
         cap = cv2.VideoCapture(video_path)
         all_detections = []
         frame_count = 0
+        temp_paths: list[str] = []
 
-        while True:
-            ret, frame = cap.read()
-            if not ret:
-                break
+        try:
+            while True:
+                ret, frame = cap.read()
+                if not ret:
+                    break
 
-            if frame_count % sample_every_n_frames == 0:
-                temp_path = f"/tmp/frame_{frame_count}.jpg"
-                cv2.imwrite(temp_path, frame)
-                all_detections.extend(self.detect(temp_path))
+                if frame_count % sample_every_n_frames == 0:
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp_file:
+                        temp_path = temp_file.name
+                    temp_paths.append(temp_path)
+                    cv2.imwrite(temp_path, frame)
+                    all_detections.extend(self.detect(temp_path))
 
-            frame_count += 1
-
-        cap.release()
+                frame_count += 1
+        finally:
+            cap.release()
+            for temp_path in temp_paths:
+                try:
+                    os.remove(temp_path)
+                except FileNotFoundError:
+                    continue
+                except OSError:
+                    logger.warning("failed_to_remove_temp_frame path=%s", temp_path)
 
         unique_equipment = {}
         for det in all_detections:

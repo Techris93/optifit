@@ -12,7 +12,7 @@
   background: rgba(7, 12, 24, 0.84);
   border-bottom: 1px solid rgba(95, 112, 140, 0.26);
   backdrop-filter: blur(16px);
-  padding: 14px 20px;
+  padding: calc(14px + var(--safe-top) * 0.2) 20px 14px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -37,20 +37,21 @@
 
 .nav-links {
   display: flex;
-  gap: 8px;
+  gap: 10px;
 }
 
 .nav-link {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 9px 14px;
   border-radius: 999px;
   color: rgba(214, 223, 240, 0.72);
   font-size: 0.84rem;
   font-weight: 600;
   transition: all 0.2s ease;
   border: 1px solid transparent;
+  min-height: 44px;
 }
 
 .nav-link:hover {
@@ -63,12 +64,13 @@
   color: #06271f;
   background: linear-gradient(120deg, #2de6d8, #2b7dff);
   border-color: transparent;
+  box-shadow: 0 14px 28px rgba(43, 125, 255, 0.22);
 }
 
 .main-content {
   flex: 1;
-  padding: 24px 18px 80px;
-  max-width: 1120px;
+  padding: 28px 20px 112px;
+  max-width: 1180px;
   margin: 0 auto;
   width: 100%;
 }
@@ -91,9 +93,9 @@
 
 .card {
   background: linear-gradient(180deg, rgba(15, 23, 42, 0.86), rgba(8, 14, 28, 0.9));
-  border-radius: 20px;
-  padding: 20px;
-  margin-bottom: 16px;
+  border-radius: 24px;
+  padding: 22px;
+  margin-bottom: 18px;
   border: 1px solid rgba(95, 112, 140, 0.3);
   box-shadow:
     0 20px 40px rgba(2, 6, 23, 0.35),
@@ -205,6 +207,7 @@
   font-weight: 700;
   transition: all 0.22s ease;
   border: 1px solid transparent;
+  text-decoration: none;
 }
 
 .btn-primary {
@@ -226,6 +229,11 @@
 .btn-secondary:hover {
   background: rgba(23, 35, 57, 0.88);
   border-color: rgba(45, 230, 216, 0.4);
+}
+
+.btn[aria-disabled="true"] {
+  opacity: 0.45;
+  pointer-events: none;
 }
 
 .btn-large {
@@ -405,6 +413,7 @@
 
 .category-grid,
 .step-grid,
+.launchpad-grid,
 .stats-grid,
 .preference-grid,
 .stitch-grid {
@@ -423,6 +432,7 @@
 }
 
 .category-card,
+.launchpad-card,
 .step-card,
 .stat-card,
 .stitch-card {
@@ -430,6 +440,37 @@
   border: 1px solid rgba(95, 112, 140, 0.32);
   border-radius: 16px;
   padding: 14px;
+}
+
+.launchpad-card {
+  display: grid;
+  gap: 18px;
+  text-decoration: none;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.launchpad-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(45, 230, 216, 0.4);
+  box-shadow: 0 18px 36px rgba(2, 6, 23, 0.28);
+}
+
+.launchpad-card h3 {
+  color: #eefbff;
+  margin-bottom: 8px;
+}
+
+.launchpad-card p {
+  color: var(--text-muted);
+}
+
+.launchpad-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #90fff4;
+  font-size: 0.9rem;
+  font-weight: 700;
 }
 
 .stitch-card {
@@ -622,6 +663,158 @@ textarea.field-control {
   border: none;
 }
 
+.exercise-detail-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  color: #d6e5fc;
+  border: 1px solid rgba(95, 112, 140, 0.32);
+  background: rgba(20, 31, 52, 0.75);
+  font-size: 0.8rem;
+}
+
+.exercise-detail-panel {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(95, 112, 140, 0.24);
+}
+
+.exercise-animation-card {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.95fr) minmax(260px, 1.05fr);
+  gap: 16px;
+  padding: 16px;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 12% 10%, rgba(45, 230, 216, 0.18), transparent 30%),
+    linear-gradient(145deg, rgba(9, 18, 34, 0.94), rgba(16, 26, 45, 0.9));
+  border: 1px solid rgba(45, 230, 216, 0.2);
+}
+
+.exercise-animation-stage {
+  display: grid;
+  gap: 12px;
+}
+
+.exercise-animation-stage-header,
+.exercise-animation-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.exercise-animation-chip,
+.exercise-animation-equipment {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.exercise-animation-chip {
+  background: rgba(45, 230, 216, 0.14);
+  border: 1px solid rgba(45, 230, 216, 0.3);
+  color: #96fff6;
+}
+
+.exercise-animation-equipment {
+  background: rgba(43, 125, 255, 0.14);
+  border: 1px solid rgba(43, 125, 255, 0.24);
+  color: #c7e0ff;
+}
+
+.exercise-animation-canvas {
+  min-height: 240px;
+  border-radius: 16px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top center, rgba(43, 125, 255, 0.16), transparent 34%),
+    rgba(10, 17, 31, 0.9);
+  border: 1px solid rgba(95, 112, 140, 0.26);
+}
+
+.exercise-animation-canvas canvas {
+  display: block;
+  width: 100%;
+  height: 240px;
+}
+
+.exercise-animation-panel,
+.exercise-animation-copy,
+.exercise-animation-cues {
+  display: grid;
+  gap: 12px;
+}
+
+.exercise-animation-panel {
+  align-content: start;
+}
+
+.exercise-animation-title-row {
+  justify-content: flex-start;
+  color: #f5fcff;
+}
+
+.exercise-animation-copy p {
+  color: rgba(214, 223, 240, 0.82);
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.exercise-animation-map {
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(8, 14, 28, 0.72);
+  border: 1px solid rgba(95, 112, 140, 0.26);
+}
+
+.muscle-map-svg {
+  width: 100%;
+  max-width: 220px;
+  margin: 0 auto;
+  display: block;
+}
+
+.muscle-body-base {
+  fill: rgba(101, 123, 160, 0.3);
+  stroke: rgba(189, 204, 228, 0.14);
+  stroke-width: 1.2;
+}
+
+.muscle-body-soft {
+  fill: rgba(43, 125, 255, 0.14);
+}
+
+.muscle-hot {
+  fill: #2de6d8;
+  filter: drop-shadow(0 0 10px rgba(45, 230, 216, 0.65));
+  animation: muscle-pulse 1.8s ease-in-out infinite;
+}
+
+.exercise-animation-cues {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.exercise-animation-cue {
+  min-width: 0;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(17, 26, 45, 0.78);
+  border: 1px solid rgba(95, 112, 140, 0.24);
+  color: #dbeafe;
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
 .result-badges {
   display: flex;
   flex-wrap: wrap;
@@ -704,15 +897,13 @@ textarea.field-control {
   display: block;
 }
 
-.scan-preview-video {
+.scan-preview-video,
+.scan-preview-video-player {
   width: 100%;
   height: 100%;
-  display: grid;
-  place-items: center;
-  gap: 6px;
-  text-align: center;
-  font-size: 0.875rem;
-  color: var(--text-muted);
+  display: block;
+  object-fit: cover;
+  background: #050a14;
 }
 
 .scan-preview-copy {
@@ -783,6 +974,30 @@ textarea.field-control {
   flex: 1;
 }
 
+.selection-summary-card,
+.progress-highlight-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(11, 20, 36, 0.74);
+  border: 1px solid rgba(95, 112, 140, 0.32);
+}
+
+.selection-summary-card span,
+.progress-highlight-card span {
+  color: var(--text-muted);
+}
+
+.selection-summary-card strong,
+.progress-highlight-card strong {
+  color: #f7fdff;
+  font-size: 1.2rem;
+}
+
 .step-icon,
 .stat-icon {
   width: 40px;
@@ -837,7 +1052,8 @@ textarea.field-control {
 }
 
 .filter-control {
-  width: auto;
+  flex: 1 1 220px;
+  width: 100%;
 }
 
 .muscle-chip-row {
@@ -863,6 +1079,69 @@ textarea.field-control {
   border-color: rgba(239, 68, 68, 0.48);
 }
 
+.set-rows-header,
+.set-rows-actions,
+.progress-highlight-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.set-rows-header {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.set-rows-actions {
+  flex-wrap: wrap;
+}
+
+.mini-action-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 12px;
+  border-radius: 999px;
+  background: rgba(20, 31, 52, 0.9);
+  border: 1px solid rgba(95, 112, 140, 0.4);
+  color: #d6e5fc;
+}
+
+.set-row-grid {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.set-row-card {
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(95, 112, 140, 0.32);
+  background: rgba(12, 22, 38, 0.72);
+}
+
+.set-row-index {
+  color: #f4fcff;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.set-row-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.progress-highlight-row {
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.progress-highlight-card {
+  flex: 1 1 220px;
+  margin-top: 0;
+}
+
 .spinner {
   width: 40px;
   height: 40px;
@@ -880,6 +1159,16 @@ textarea.field-control {
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes muscle-pulse {
+  0%, 100% {
+    opacity: 0.72;
+  }
+
+  50% {
+    opacity: 1;
   }
 }
 
@@ -902,11 +1191,11 @@ textarea.field-control {
     position: fixed;
     left: 12px;
     right: 12px;
-    bottom: 12px;
+    bottom: calc(12px + var(--safe-bottom));
     top: auto;
     border: 1px solid rgba(95, 112, 140, 0.34);
     border-radius: 22px;
-    padding: 10px;
+    padding: 10px 12px calc(10px + var(--safe-bottom) * 0.35);
     justify-content: center;
   }
 
@@ -921,16 +1210,16 @@ textarea.field-control {
 
   .nav-link {
     flex: 1;
+    flex-direction: column;
     justify-content: center;
-    padding: 10px 4px;
-  }
-
-  .nav-link span {
-    display: none;
+    padding: 8px 4px;
+    gap: 6px;
+    border-radius: 16px;
+    font-size: 0.68rem;
   }
 
   .main-content {
-    padding: 14px 8px 104px;
+    padding: 14px 10px calc(126px + var(--safe-bottom));
   }
 
   .hero-card h1 {
@@ -952,5 +1241,19 @@ textarea.field-control {
   .inline-actions,
   .search-row {
     flex-direction: column;
+  }
+
+  .set-row-fields,
+  .progress-highlight-row {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+  }
+
+  .exercise-animation-card {
+    grid-template-columns: 1fr;
+  }
+
+  .exercise-animation-stage-header {
+    flex-wrap: wrap;
   }
 }
