@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { ChevronRight, Clock, Dumbbell, RefreshCw, Save, Target } from 'lucide-react'
-import { useSearchParams } from 'react-router-dom'
-import ExerciseMediaPreview from '../components/ExerciseMediaPreview'
+import { Link, useSearchParams } from 'react-router-dom'
+import ExerciseAnimationCard from '../components/animation/ExerciseAnimationCard'
 import VisionStatusBadge from '../components/VisionStatusBadge'
 import { generateWorkout, getEquipmentTypes, saveGeneratedWorkout } from '../utils/api'
+import { buildGeneratedExerciseAnimationProfile } from '../data/exerciseAnimations'
 import type { WorkoutExerciseMatch, WorkoutGenerationResponse } from '../types'
-import routinePreview from '../assets/stitch/ai_generated_workout_routine.jpg'
 
 type EquipmentCategory = {
   id: string
@@ -96,7 +96,7 @@ export default function WorkoutGenerator() {
   return (
     <div>
       <div className="card page-hero-card">
-        <div className="hero-shell">
+        <div className="hero-shell hero-shell-text-only">
           <div className="hero-content">
             <div className="hero-kicker">Plan with precision</div>
             <h1>Workout Builder</h1>
@@ -104,9 +104,6 @@ export default function WorkoutGenerator() {
             <div className="page-status-row">
               <VisionStatusBadge mode={source === 'scan' ? detectionMode : 'manual'} />
             </div>
-          </div>
-          <div className="hero-visual">
-            <img src={routinePreview} alt="Workout routine preview" loading="lazy" decoding="async" />
           </div>
         </div>
       </div>
@@ -270,7 +267,7 @@ export default function WorkoutGenerator() {
                 equipment_used: result.equipment_used,
                 exercise_matches: result.exercise_matches,
               })
-              setSuccessMessage(`Workout saved with id ${saved.id}.`)
+              setSuccessMessage(`Workout saved successfully${saved.id ? ` as #${saved.id}` : ''}.`)
             } catch (err) {
               setError(err instanceof Error ? err.message : 'Failed to save workout')
             } finally {
@@ -357,7 +354,15 @@ function WorkoutResult({
         <div><strong>Equipment used:</strong> {result.equipment_used.map((item) => item.replace(/_/g, ' ')).join(', ')}</div>
       </div>
 
-      {successMessage && <div className="card top-gap-16">{successMessage}</div>}
+      {successMessage && (
+        <div className="card top-gap-16 saved-confirmation-card">
+          <strong>{successMessage}</strong>
+          <p className="muted-paragraph">Open Saved Workouts to review the stored session inside the same owner scope.</p>
+          <Link to="/saved" className="btn btn-secondary">
+            View Saved Workouts
+          </Link>
+        </div>
+      )}
 
       <div className="inline-actions top-gap-24">
         <button type="button" className="btn btn-primary flex-grow" onClick={() => void onSave()} disabled={saving}>
@@ -374,11 +379,22 @@ function WorkoutResult({
 
 function WorkoutExerciseCard({ match, index }: { match: WorkoutExerciseMatch; index: number }) {
   const title = match.exercise?.name || match.slug.replace(/_/g, ' ')
+  const schemeText = `${match.sets}x${match.reps}`
+  const equipmentKeys = match.exercise?.equipment?.map((item) => item.name) || (match.equipment ? [match.equipment] : [])
+  const muscles = match.exercise?.muscle_groups || match.target_muscles || []
+  const animationProfile = buildGeneratedExerciseAnimationProfile({
+    slug: match.slug,
+    title,
+    equipment: equipmentKeys,
+    muscles,
+    defaultScheme: schemeText,
+  })
+  const demoUrl = match.exercise?.video_url || match.exercise?.gif_url || match.exercise?.image_url || match.exercise?.demo_search_url
 
   return (
     <div className="exercise-card">
       <div className="exercise-layout">
-        <ExerciseMediaPreview exercise={match.exercise} title={title} />
+        <ExerciseAnimationCard profile={animationProfile} schemeText={schemeText} compact />
 
         <div className="exercise-body">
           <div className="exercise-header">
@@ -418,6 +434,12 @@ function WorkoutExerciseCard({ match, index }: { match: WorkoutExerciseMatch; in
               {match.exercise?.video_url || match.exercise?.gif_url || match.exercise?.image_url ? 'Media attached' : 'Media link fallback ready'}
             </span>
           </div>
+
+          {demoUrl && (
+            <a href={demoUrl} target="_blank" rel="noreferrer" className="exercise-demo-link top-gap-10">
+              Open demo reference
+            </a>
+          )}
         </div>
       </div>
     </div>

@@ -1,11 +1,12 @@
 import { Routes, Route, NavLink, Navigate } from 'react-router-dom'
-import { BookOpen, Camera, ClipboardList, Dumbbell, History, Sparkles } from 'lucide-react'
+import { Archive, BookOpen, Camera, ClipboardList, Dumbbell, History, Sparkles } from 'lucide-react'
 import { enableAnalyze } from './config'
 import Home from './pages/Home'
 import EquipmentScan from './pages/EquipmentScan'
 import WorkoutGenerator from './pages/WorkoutGenerator'
 import ExerciseLibrary from './pages/ExerciseLibrary'
 import Progress from './pages/Progress'
+import SavedWorkouts from './pages/SavedWorkouts'
 import './App.css'
 
 function App() {
@@ -31,6 +32,10 @@ function App() {
             <ClipboardList size={18} />
             <span>Workouts</span>
           </NavLink>
+          <NavLink to="/saved" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
+            <Archive size={18} />
+            <span>Saved</span>
+          </NavLink>
           <NavLink to="/exercises" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
             <BookOpen size={18} />
             <span>Exercises</span>
@@ -47,6 +52,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/analyze" element={enableAnalyze ? <EquipmentScan /> : <Navigate to="/workouts" replace />} />
           <Route path="/workouts" element={<WorkoutGenerator />} />
+          <Route path="/saved" element={<SavedWorkouts />} />
           <Route path="/exercises" element={<ExerciseLibrary />} />
           <Route path="/progress" element={<Progress />} />
         </Routes>

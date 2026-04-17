@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react'
 import { Award, Calendar, Minus, Plus, TrendingUp } from 'lucide-react'
 import { getProgressHistory, logProgress, searchExercises } from '../utils/api'
 import type { Exercise, ProgressHistoryResponse } from '../types'
-import progressPreview from '../assets/stitch/progress_tracking_dashboard.jpg'
 
 type SetRow = {
   reps: string
@@ -122,14 +121,11 @@ export default function Progress() {
   return (
     <div>
       <div className="card page-hero-card">
-        <div className="hero-shell">
+        <div className="hero-shell hero-shell-text-only">
           <div className="hero-content">
             <div className="hero-kicker">Measure consistency</div>
             <h1>Progress Tracking</h1>
             <p className="hero-copy">Log each session, track volume trends, and keep recent activity visible so progression stays objective.</p>
-          </div>
-          <div className="hero-visual">
-            <img src={progressPreview} alt="Progress dashboard interface preview" loading="lazy" decoding="async" />
           </div>
         </div>
       </div>

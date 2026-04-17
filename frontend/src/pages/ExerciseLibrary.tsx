@@ -6,7 +6,6 @@ import ExerciseMediaPreview from '../components/ExerciseMediaPreview'
 import { getExerciseAnimationProfile } from '../data/exerciseAnimations'
 import { getMuscleGroups, searchExercises } from '../utils/api'
 import type { Exercise } from '../types'
-import libraryPreview from '../assets/stitch/exercise_library_screen.jpg'
 
 export default function ExerciseLibrary() {
   const [exercises, setExercises] = useState<Exercise[]>([])
@@ -54,14 +53,11 @@ export default function ExerciseLibrary() {
   return (
     <div>
       <div className="card page-hero-card">
-        <div className="hero-shell">
+        <div className="hero-shell hero-shell-text-only">
           <div className="hero-content">
             <div className="hero-kicker">Find and learn</div>
             <h1>Exercise Library</h1>
             <p className="hero-copy">Search movements by muscle group and difficulty, then review form guidance and media without leaving your workout flow.</p>
-          </div>
-          <div className="hero-visual">
-            <img src={libraryPreview} alt="Exercise library interface preview" loading="lazy" decoding="async" />
           </div>
         </div>
       </div>

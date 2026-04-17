@@ -2,11 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { Camera, CheckCircle, Dumbbell, Image as ImageIcon, RefreshCw, Upload, Video } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import ExerciseAnimationWorkoutGrid from '../components/animation/ExerciseAnimationWorkoutGrid'
 import VisionStatusBadge from '../components/VisionStatusBadge'
 import { enableAnalyze } from '../config'
+import { getExerciseAnimationProfilesForEquipment } from '../data/exerciseAnimations'
 import { detectEquipment, getHealthStatus } from '../utils/api'
 import type { DetectionResult, HealthStatus } from '../types'
-import scannerPreview from '../assets/stitch/ai_equipment_scanner_interface.jpg'
 
 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
 const apiBaseUrl = apiUrl.endsWith('/api') ? apiUrl.slice(0, -4) : apiUrl
@@ -60,6 +61,11 @@ export default function EquipmentScan() {
     return params.toString()
   }, [confirmedEquipment, health?.detection_mode, result?.detection_mode])
 
+  const matchedAnimationProfiles = useMemo(
+    () => getExerciseAnimationProfilesForEquipment(confirmedEquipment, 8),
+    [confirmedEquipment]
+  )
+
   const handleScan = async () => {
     if (files.length === 0) return
 
@@ -107,7 +113,7 @@ export default function EquipmentScan() {
   return (
     <div>
       <div className="card page-hero-card">
-        <div className="hero-shell">
+        <div className="hero-shell hero-shell-text-only">
           <div className="hero-content">
             <div className="hero-kicker">Capture and confirm</div>
             <h1>Scan Your Equipment</h1>
@@ -115,9 +121,6 @@ export default function EquipmentScan() {
             <div className="page-status-row">
               <VisionStatusBadge mode={result?.detection_mode ?? health?.detection_mode ?? 'manual'} />
             </div>
-          </div>
-          <div className="hero-visual">
-            <img src={scannerPreview} alt="Equipment scanner interface preview" loading="lazy" decoding="async" />
           </div>
         </div>
       </div>
@@ -269,6 +272,18 @@ export default function EquipmentScan() {
               })}
             </div>
           </div>
+
+          {matchedAnimationProfiles.length > 0 && (
+            <div className="anatomical-preview-block">
+              <div className="card-title">Matched Anatomical Workout Preview</div>
+              <p className="muted-paragraph">
+                These anatomy-first motion packs are matched from your confirmed equipment. Workout generation and saved sessions will reuse the same anatomical visual language per exercise.
+              </p>
+              <div className="top-gap-16">
+                <ExerciseAnimationWorkoutGrid profiles={matchedAnimationProfiles} />
+              </div>
+            </div>
+          )}
 
           <div className="scan-result-actions">
             <Link

@@ -139,6 +139,22 @@ export interface WorkoutGenerationResponse {
   generation_mode?: string
 }
 
+export interface SavedWorkoutSummary {
+  id: number
+  name: string
+  description?: string | null
+  goal?: string | null
+  difficulty?: string | null
+  estimated_duration_minutes?: number | null
+  equipment_used?: string[] | null
+  created_at?: string | null
+  is_template?: boolean
+}
+
+export interface SavedWorkoutDetail extends SavedWorkoutSummary {
+  exercises?: Exercise[]
+}
+
 export interface HealthStatus {
   status: string
   environment: string

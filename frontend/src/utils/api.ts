@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { enableAnalyze } from '../config'
-import type { HealthStatus, WorkoutExerciseMatch, UserPreferences } from '../types'
+import type { HealthStatus, SavedWorkoutDetail, SavedWorkoutSummary, WorkoutExerciseMatch, UserPreferences } from '../types'
 import { getAccessToken, getOrCreateClientSessionId } from './session'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
@@ -78,8 +78,13 @@ export const saveGeneratedWorkout = async (payload: {
   return data
 }
 
-export const getSavedWorkouts = async () => {
+export const getSavedWorkouts = async (): Promise<SavedWorkoutSummary[]> => {
   const { data } = await api.get('/workouts/')
+  return data
+}
+
+export const getSavedWorkout = async (id: number): Promise<SavedWorkoutDetail> => {
+  const { data } = await api.get(`/workouts/${id}`)
   return data
 }
 

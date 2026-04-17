@@ -1,20 +1,12 @@
 import { useEffect, useState } from 'react'
 import { ArrowRight, Camera, Dumbbell, Sparkles, Video } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import ExerciseAnimationCard from '../components/animation/ExerciseAnimationCard'
+import ExerciseAnimationGallery from '../components/animation/ExerciseAnimationGallery'
 import { enableAnalyze } from '../config'
-import { getExerciseAnimationProfile } from '../data/exerciseAnimations'
+import { getFeaturedExerciseAnimationProfiles } from '../data/exerciseAnimations'
 import VisionStatusBadge from '../components/VisionStatusBadge'
 import type { HealthStatus } from '../types'
 import { getHealthStatus } from '../utils/api'
-import homeRedesign from '../assets/stitch/optifit_home_screen_redesign.jpg'
-import scannerRedesign from '../assets/stitch/ai_equipment_scanner_interface.jpg'
-import routineRedesign from '../assets/stitch/ai_generated_workout_routine.jpg'
-import trackerRedesign from '../assets/stitch/active_workout_tracker.jpg'
-import summaryRedesign from '../assets/stitch/post_workout_summary.jpg'
-import progressRedesign from '../assets/stitch/progress_tracking_dashboard.jpg'
-import libraryRedesign from '../assets/stitch/exercise_library_screen.jpg'
-import manualSelectionRedesign from '../assets/stitch/manual_equipment_selection.jpg'
 
 const steps = [
   {
@@ -53,6 +45,12 @@ const launchpads = [
     cta: 'Generate workout'
   },
   {
+    title: 'Saved Sessions',
+    description: 'Open only the workouts scoped to your current session or account and rebuild from them quickly.',
+    route: '/saved',
+    cta: 'Open saved'
+  },
+  {
     title: 'Browse The Library',
     description: 'Search exercises, open demo media, and review instructions without leaving the app.',
     route: '/exercises',
@@ -66,19 +64,9 @@ const launchpads = [
   }
 ]
 
-const redesignScreens = [
-  { title: 'AI Scanner', copy: 'Live equipment detection view with confidence tags.', image: scannerRedesign },
-  { title: 'Manual Selection', copy: 'Fast fallback equipment picker with instant toggles.', image: manualSelectionRedesign },
-  { title: 'AI Routine', copy: 'Generated routine list with practical set and rep targets.', image: routineRedesign },
-  { title: 'Active Workout', copy: 'In-session timer and set tracker focused on execution.', image: trackerRedesign },
-  { title: 'Exercise Library', copy: 'Search-first catalog with machine and free-weight coverage.', image: libraryRedesign },
-  { title: 'Progress Dashboard', copy: 'Weekly consistency, volume trend, and milestones at a glance.', image: progressRedesign },
-  { title: 'Post-Workout Summary', copy: 'Session recap with key stats and personal bests.', image: summaryRedesign },
-]
-
 export default function Home() {
   const [health, setHealth] = useState<HealthStatus | null>(null)
-  const featuredAnimation = getExerciseAnimationProfile('push_ups')
+  const featuredProfiles = getFeaturedExerciseAnimationProfiles(4)
 
   useEffect(() => {
     getHealthStatus().then(setHealth).catch(() => undefined)
@@ -87,7 +75,7 @@ export default function Home() {
   return (
     <div>
       <section className="card hero-card">
-        <div className="hero-shell">
+        <div className="hero-shell hero-shell-text-only">
           <div className="hero-content">
             <div className="hero-kicker">Scan. Confirm. Train.</div>
             <div className="hero-status-row">
@@ -115,9 +103,6 @@ export default function Home() {
                 <ArrowRight size={18} />
               </Link>
             </div>
-          </div>
-          <div className="hero-visual">
-            <img src={homeRedesign} alt="OptiFit home redesign concept" loading="eager" decoding="async" />
           </div>
         </div>
       </section>
@@ -166,27 +151,17 @@ export default function Home() {
         </div>
       </section>
 
-      {featuredAnimation && (
+      {featuredProfiles.length > 0 && (
         <section className="card">
-          <div className="card-title">Animation-Ready Exercise Card</div>
-          <ExerciseAnimationCard profile={featuredAnimation} />
+          <div className="card-title">Anatomical Motion Packs</div>
+          <p className="muted-paragraph">
+            Curated anatomy-first workout tiles now match equipment and exercise intent instead of relying on a single generic loop.
+          </p>
+          <div className="top-gap-16">
+            <ExerciseAnimationGallery profiles={featuredProfiles} compact />
+          </div>
         </section>
       )}
-
-      <section className="card">
-        <div className="card-title">Stitch Redesign Preview</div>
-        <div className="stitch-grid">
-          {redesignScreens.map((screen) => (
-            <article key={screen.title} className="stitch-card">
-              <img src={screen.image} alt={screen.title} className="stitch-image" loading="lazy" decoding="async" />
-              <div className="stitch-copy">
-                <h3>{screen.title}</h3>
-                <p>{screen.copy}</p>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
     </div>
   )
 }
