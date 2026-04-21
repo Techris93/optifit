@@ -11,8 +11,8 @@ export default defineConfig({
         name: 'OptiFit - AI Workout Planner',
         short_name: 'OptiFit',
         description: 'Generate personalized workouts from your gym equipment',
-        theme_color: '#000000',
-        background_color: '#0f0f0f',
+        theme_color: '#2563eb',
+        background_color: '#f3f7fc',
         display: 'standalone',
         icons: [
           {
@@ -24,6 +24,12 @@ export default defineConfig({
             src: '/icon-512.png',
             sizes: '512x512',
             type: 'image/png'
+          },
+          {
+            src: '/icon-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable'
           }
         ]
       }

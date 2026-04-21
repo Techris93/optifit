@@ -1,0 +1,18 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="optifit-bg" x1="96" y1="72" x2="424" y2="440" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F172A" />
+      <stop offset="0.52" stop-color="#184B8C" />
+      <stop offset="1" stop-color="#2563EB" />
+    </linearGradient>
+    <radialGradient id="optifit-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(370 120) rotate(126.469) scale(222.426)">
+      <stop stop-color="#67E8F9" stop-opacity="0.7" />
+      <stop offset="1" stop-color="#67E8F9" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+  <rect x="32" y="32" width="448" height="448" rx="126" fill="url(#optifit-bg)" />
+  <rect x="32" y="32" width="448" height="448" rx="126" fill="url(#optifit-glow)" />
+  <circle cx="186" cy="256" r="84" stroke="white" stroke-width="42" />
+  <path d="M290 170C290 156.745 300.745 146 314 146H404C417.255 146 428 156.745 428 170C428 183.255 417.255 194 404 194H338V236H392C405.255 236 416 246.745 416 260C416 273.255 405.255 284 392 284H338V346C338 359.255 327.255 370 314 370C300.745 370 290 359.255 290 346V170Z" fill="white" />
+  <circle cx="366" cy="118" r="22" fill="#67E8F9" />
+</svg>
