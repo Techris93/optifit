@@ -11,7 +11,7 @@ from sqlalchemy import inspect, text
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.config import settings
-from app.routers import equipment, workouts, exercises, auth, uploads, progress
+from app.routers import auth, dashboard, equipment, exercises, progress, uploads, workouts
 from app.models.database import engine, Base
 from app.security import validate_runtime_security
 
@@ -30,11 +30,28 @@ async def lifespan(_app: FastAPI):
 
 def reconcile_runtime_schema() -> None:
     inspector = inspect(engine)
-    workout_columns = {column["name"] for column in inspector.get_columns("workouts")}
+    table_names = set(inspector.get_table_names())
 
-    if "guest_session_id" not in workout_columns:
-        with engine.begin() as connection:
-            connection.execute(text("ALTER TABLE workouts ADD COLUMN guest_session_id VARCHAR"))
+    if "workouts" in table_names:
+        workout_columns = {column["name"] for column in inspector.get_columns("workouts")}
+        if "guest_session_id" not in workout_columns:
+            with engine.begin() as connection:
+                connection.execute(text("ALTER TABLE workouts ADD COLUMN guest_session_id VARCHAR"))
+
+    if "progress_entries" in table_names:
+        progress_columns = {column["name"] for column in inspector.get_columns("progress_entries")}
+        if "guest_session_id" not in progress_columns:
+            with engine.begin() as connection:
+                connection.execute(text("ALTER TABLE progress_entries ADD COLUMN guest_session_id VARCHAR"))
+
+    if "workout_exercises" in table_names and engine.dialect.name == "postgresql":
+        association_columns = {column["name"]: column for column in inspector.get_columns("workout_exercises")}
+        reps_type_name = getattr(association_columns.get("reps", {}).get("type"), "__visit_name__", "").lower()
+        if reps_type_name == "integer":
+            with engine.begin() as connection:
+                connection.execute(
+                    text("ALTER TABLE workout_exercises ALTER COLUMN reps TYPE VARCHAR USING reps::varchar")
+                )
 
 app = FastAPI(
     title="OptiFit API",
@@ -96,6 +113,7 @@ if settings.enable_local_vision:
 
 # Routers
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"])
 app.include_router(equipment.router, prefix="/api/equipment", tags=["equipment"])
 app.include_router(workouts.router, prefix="/api/workouts", tags=["workouts"])
 app.include_router(exercises.router, prefix="/api/exercises", tags=["exercises"])

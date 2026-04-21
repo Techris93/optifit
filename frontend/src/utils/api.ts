@@ -1,6 +1,13 @@
 import axios from 'axios'
 import { enableAnalyze } from '../config'
-import type { HealthStatus, SavedWorkoutDetail, SavedWorkoutSummary, WorkoutExerciseMatch, UserPreferences } from '../types'
+import type {
+  HealthStatus,
+  HomeSummary,
+  SavedWorkoutDetail,
+  SavedWorkoutSummary,
+  WorkoutExerciseMatch,
+  UserPreferences,
+} from '../types'
 import { getAccessToken, getOrCreateClientSessionId } from './session'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
@@ -155,5 +162,10 @@ export const getProgressHistory = async (params?: {
 export const getHealthStatus = async (): Promise<HealthStatus> => {
   const baseUrl = API_URL.endsWith('/api') ? API_URL.slice(0, -4) : API_URL
   const { data } = await axios.get(`${baseUrl}/health`)
+  return data
+}
+
+export const getHomeSummary = async (): Promise<HomeSummary> => {
+  const { data } = await api.get('/dashboard/summary')
   return data
 }

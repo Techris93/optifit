@@ -249,6 +249,7 @@ export default function SavedWorkouts() {
                   <div className="card-title">Exercise List</div>
                   {(selectedWorkout.exercises ?? []).map((exercise, index) => {
                     const demoUrl = exercise.video_url || exercise.gif_url || exercise.image_url || exercise.demo_search_url
+                    const prescription = exercise.prescription
                     return (
                       <article key={`${exercise.slug}-${index}-detail`} className="saved-workout-exercise-row">
                         <div>
@@ -260,6 +261,13 @@ export default function SavedWorkouts() {
                               ? `Targets ${(exercise.muscle_groups ?? []).join(', ').replace(/_/g, ' ')}`
                               : 'Exercise details available from the saved library entry.'}
                           </p>
+                          {prescription && (
+                            <div className="saved-workout-prescription-row">
+                              <span>{prescription.sets} sets</span>
+                              <span>{prescription.reps} reps</span>
+                              <span>{prescription.rest_seconds}s rest</span>
+                            </div>
+                          )}
                         </div>
                         <div className="saved-workout-exercise-actions">
                           <span className="status-badge secondary">{humanize(exercise.difficulty)}</span>

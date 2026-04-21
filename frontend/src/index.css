@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap');
+
 * {
   margin: 0;
   padding: 0;
@@ -29,13 +31,14 @@
 }
 
 body {
-  font-family: 'Sora', 'Avenir Next', 'Segoe UI', sans-serif;
+  font-family: 'Inter', 'Avenir Next', 'Segoe UI', sans-serif;
   background: var(--bg);
   color: var(--text);
   line-height: 1.5;
   min-height: 100vh;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+  color-scheme: dark;
 }
 
 #root {

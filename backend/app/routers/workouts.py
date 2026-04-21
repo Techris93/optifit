@@ -5,16 +5,16 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.database import EquipmentType, Exercise, User, Workout, get_db, workout_exercises
 from app.routers.auth import get_optional_current_user
+from app.session_scope import require_request_scope
 from app.services.workout_generator import WorkoutGenerator
 from app.services.exercise_media_service import exercise_media_service
 
 router = APIRouter()
-CLIENT_SESSION_HEADER = "x-client-session-id"
-CLIENT_SESSION_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{15,127}$")
 
 
 class WorkoutGenerateRequest(BaseModel):
@@ -43,24 +43,9 @@ class WorkoutSaveRequest(BaseModel):
     exercise_matches: List[WorkoutExerciseSave]
 
 
-def _get_client_session_id(request: Request) -> str | None:
-    session_id = request.headers.get(CLIENT_SESSION_HEADER, "").strip()
-    if not session_id:
-        return None
-    if not CLIENT_SESSION_PATTERN.fullmatch(session_id):
-        raise HTTPException(400, "Invalid client session identifier.")
-    return session_id
-
-
 def _require_workout_scope(request: Request, current_user: User | None) -> tuple[int | None, str | None]:
-    if current_user is not None:
-        return current_user.id, None
-
-    session_id = _get_client_session_id(request)
-    if session_id:
-        return None, session_id
-
-    raise HTTPException(401, "Authentication or a client session is required.")
+    scope = require_request_scope(request, current_user)
+    return scope.user_id, scope.guest_session_id
 
 
 def _scoped_workout_query(db: Session, request: Request, current_user: User | None):
@@ -71,7 +56,7 @@ def _scoped_workout_query(db: Session, request: Request, current_user: User | No
     return query.filter(Workout.guest_session_id == guest_session_id)
 
 
-def _serialize_exercise(exercise: Exercise) -> dict:
+def _serialize_exercise(exercise: Exercise, prescription: dict | None = None) -> dict:
     """Serialize exercise with media enrichment."""
     base_data = {
         "id": exercise.id,
@@ -108,6 +93,9 @@ def _serialize_exercise(exercise: Exercise) -> dict:
             base_data["gif_url"] = media_data["gif_url"]
         if not base_data["image_url"] and media_data.get("image_url"):
             base_data["image_url"] = media_data["image_url"]
+
+    if prescription is not None:
+        base_data["prescription"] = prescription
 
     return base_data
 
@@ -297,6 +285,30 @@ def _get_or_create_canonical_exercise(
     return exercise
 
 
+def _workout_prescriptions(db: Session, workout_id: int) -> dict[int, dict]:
+    rows = db.execute(
+        select(
+            workout_exercises.c.exercise_id,
+            workout_exercises.c.sets,
+            workout_exercises.c.reps,
+            workout_exercises.c.rest_seconds,
+            workout_exercises.c.order,
+        )
+        .where(workout_exercises.c.workout_id == workout_id)
+        .order_by(workout_exercises.c.order.asc(), workout_exercises.c.exercise_id.asc())
+    ).all()
+
+    return {
+        row.exercise_id: {
+            "sets": row.sets,
+            "reps": str(row.reps),
+            "rest_seconds": row.rest_seconds,
+            "order": row.order,
+        }
+        for row in rows
+    }
+
+
 @router.post("/generate")
 async def generate_workout(
     payload: WorkoutGenerateRequest,
@@ -445,7 +457,13 @@ async def get_workouts(
     current_user: User | None = Depends(get_optional_current_user),
 ):
     """List saved workouts."""
-    workouts = _scoped_workout_query(db, request, current_user).offset(skip).limit(limit).all()
+    workouts = (
+        _scoped_workout_query(db, request, current_user)
+        .order_by(Workout.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
     return workouts
 
 
@@ -481,9 +499,10 @@ async def get_workout(
         raise HTTPException(404, "Workout not found")
 
     # Enrich exercises with media
+    prescriptions = _workout_prescriptions(db, workout.id)
     enriched_exercises = []
     for exercise in workout.exercises:
-        enriched = _serialize_exercise(exercise)
+        enriched = _serialize_exercise(exercise, prescription=prescriptions.get(exercise.id))
         enriched_exercises.append(enriched)
 
     return {

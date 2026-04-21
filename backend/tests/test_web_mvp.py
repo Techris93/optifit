@@ -120,6 +120,43 @@ def test_save_generated_workout_reports_inserted_exercise_count(client):
     assert payload["saved_exercise_count"] == 1
 
 
+def test_saved_workout_detail_includes_prescription(client):
+    save_response = client.post(
+        "/api/workouts/save-generated",
+        json={
+            "name": "Detailed Save",
+            "description": "Persists readable prescriptions",
+            "goal": "strength",
+            "difficulty": "beginner",
+            "estimated_duration_minutes": 30,
+            "equipment_used": ["dumbbell"],
+            "exercise_matches": [
+                {
+                    "exercise_id": 2,
+                    "slug": "dumbbell_rows",
+                    "sets": 4,
+                    "reps": "10-12",
+                    "rest_seconds": 75,
+                }
+            ],
+        },
+        headers=CLIENT_SESSION_HEADERS,
+    )
+    assert save_response.status_code == 200
+    workout_id = save_response.json()["id"]
+
+    detail_response = client.get(f"/api/workouts/{workout_id}", headers=CLIENT_SESSION_HEADERS)
+    assert detail_response.status_code == 200
+    exercises = detail_response.json()["exercises"]
+    assert len(exercises) == 1
+    assert exercises[0]["prescription"] == {
+        "sets": 4,
+        "reps": "10-12",
+        "rest_seconds": 75,
+        "order": 0,
+    }
+
+
 def test_saved_workouts_require_auth_or_client_session(client):
     response = client.get("/api/workouts/")
     assert response.status_code == 401
@@ -181,10 +218,11 @@ def test_progress_logging_and_history(client):
             "weight_per_set": [0, 0, 0],
             "notes": "Felt solid",
         },
+        headers=CLIENT_SESSION_HEADERS,
     )
     assert log_response.status_code == 200
 
-    history_response = client.get("/api/progress/history?days=30")
+    history_response = client.get("/api/progress/history?days=30", headers=CLIENT_SESSION_HEADERS)
     assert history_response.status_code == 200
     payload = history_response.json()
     assert payload["consistency"]["workouts_logged"] >= 1
@@ -200,8 +238,88 @@ def test_progress_log_rejects_mismatched_sets(client):
             "reps_per_set": [10, 10],
             "weight_per_set": [20, 20, 20],
         },
+        headers=CLIENT_SESSION_HEADERS,
     )
     assert response.status_code == 422
+
+
+def test_progress_history_is_scoped_to_guest_session(client):
+    first_session = {"x-client-session-id": "guest-session-test-0001"}
+    second_session = {"x-client-session-id": "guest-session-test-0002"}
+
+    response = client.post(
+        "/api/progress/log",
+        json={
+            "exercise_id": 1,
+            "sets_completed": 2,
+            "reps_per_set": [10, 12],
+            "weight_per_set": [0, 0],
+        },
+        headers=first_session,
+    )
+    assert response.status_code == 200
+
+    first_history = client.get("/api/progress/history?days=30", headers=first_session)
+    second_history = client.get("/api/progress/history?days=30", headers=second_session)
+    assert first_history.status_code == 200
+    assert second_history.status_code == 200
+    assert len(first_history.json()["entries"]) == 1
+    assert len(second_history.json()["entries"]) == 0
+
+
+def test_dashboard_summary_is_scoped_to_guest_session(client):
+    first_session = {"x-client-session-id": "guest-session-test-0001"}
+    second_session = {"x-client-session-id": "guest-session-test-0002"}
+
+    save_response = client.post(
+        "/api/workouts/save-generated",
+        json={
+            "name": "Dashboard Save",
+            "description": "Visible from summary",
+            "goal": "strength",
+            "difficulty": "beginner",
+            "estimated_duration_minutes": 30,
+            "equipment_used": ["dumbbell"],
+            "exercise_matches": [
+                {
+                    "exercise_id": 2,
+                    "slug": "dumbbell_rows",
+                    "sets": 3,
+                    "reps": "10-12",
+                    "rest_seconds": 60,
+                }
+            ],
+        },
+        headers=first_session,
+    )
+    assert save_response.status_code == 200
+
+    log_response = client.post(
+        "/api/progress/log",
+        json={
+            "exercise_id": 1,
+            "sets_completed": 3,
+            "reps_per_set": [10, 10, 10],
+            "weight_per_set": [0, 0, 0],
+        },
+        headers=first_session,
+    )
+    assert log_response.status_code == 200
+
+    first_summary = client.get("/api/dashboard/summary", headers=first_session)
+    second_summary = client.get("/api/dashboard/summary", headers=second_session)
+    assert first_summary.status_code == 200
+    assert second_summary.status_code == 200
+
+    first_payload = first_summary.json()
+    second_payload = second_summary.json()
+    assert first_payload["scope"] == "guest"
+    assert first_payload["stats"]["saved_workouts"] == 1
+    assert first_payload["stats"]["progress_entries"] == 1
+    assert len(first_payload["recent_saved_workouts"]) == 1
+    assert len(first_payload["recent_progress"]) == 1
+    assert second_payload["stats"]["saved_workouts"] == 0
+    assert second_payload["stats"]["progress_entries"] == 0
 
 
 def test_cloud_vision_detection_path(client, monkeypatch):

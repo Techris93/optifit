@@ -20,7 +20,7 @@ workout_exercises = Table(
     Column('workout_id', Integer, ForeignKey('workouts.id')),
     Column('exercise_id', Integer, ForeignKey('exercises.id')),
     Column('sets', Integer, default=3),
-    Column('reps', Integer, default=10),
+    Column('reps', String, default="10"),
     Column('rest_seconds', Integer, default=60),
     Column('order', Integer, default=0)
 )
@@ -138,6 +138,7 @@ class ProgressEntry(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
+    guest_session_id = Column(String, index=True, nullable=True)
     workout_id = Column(Integer, ForeignKey("workouts.id"), nullable=True)
     exercise_id = Column(Integer, ForeignKey("exercises.id"))
     

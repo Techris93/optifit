@@ -76,6 +76,7 @@ export interface Exercise {
   demo_search_url?: string
   media?: ExerciseMedia
   equipment?: Equipment[]
+  prescription?: WorkoutPrescription
 }
 
 export interface ExerciseMedia {
@@ -130,6 +131,13 @@ export interface WorkoutExerciseMatch {
   exercise?: Exercise | null
 }
 
+export interface WorkoutPrescription {
+  sets: number
+  reps: string
+  rest_seconds: number
+  order?: number
+}
+
 export interface WorkoutGenerationResponse {
   workout: Workout
   exercise_matches: WorkoutExerciseMatch[]
@@ -166,4 +174,27 @@ export interface UserPreferences {
   injuries?: string
   experience_years?: number
   preferred_style?: string
+}
+
+export interface HomeSummary {
+  scope: 'guest' | 'user' | 'anonymous' | string
+  detection_mode: HealthStatus['detection_mode']
+  stats: {
+    saved_workouts: number
+    exercise_library_total: number
+    progress_entries: number
+    active_days_30: number
+  }
+  recent_saved_workouts: SavedWorkoutSummary[]
+  recent_progress: RecentProgressSummary[]
+}
+
+export interface RecentProgressSummary {
+  id: number
+  exercise_id: number
+  exercise_name: string
+  sets_completed: number
+  total_volume: number
+  weight_unit: string
+  created_at: string
 }

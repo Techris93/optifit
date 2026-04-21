@@ -1,12 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field, model_validator
 from typing import List, Optional
-from datetime import datetime
+from datetime import UTC, datetime
 
 from app.config import settings
 from app.models.database import User, get_db, ProgressEntry
 from app.routers.auth import get_optional_current_user
+from app.session_scope import require_request_scope
 
 router = APIRouter()
 
@@ -32,6 +33,7 @@ class ProgressCreate(BaseModel):
 
 @router.post("/log")
 async def log_progress(
+    request: Request,
     entry: ProgressCreate,
     db: Session = Depends(get_db),
     current_user: User | None = Depends(get_optional_current_user),
@@ -39,9 +41,11 @@ async def log_progress(
     """Log a workout session."""
     if settings.require_auth_for_progress and current_user is None:
         raise HTTPException(401, "Authentication required")
-    
+
+    scope = require_request_scope(request, current_user)
     progress = ProgressEntry(
-        user_id=current_user.id if current_user else None,
+        user_id=scope.user_id,
+        guest_session_id=scope.guest_session_id,
         exercise_id=entry.exercise_id,
         workout_id=entry.workout_id,
         sets_completed=entry.sets_completed,
@@ -60,6 +64,7 @@ async def log_progress(
 
 @router.get("/history")
 async def get_progress_history(
+    request: Request,
     exercise_id: Optional[int] = None,
     days: int = 30,
     db: Session = Depends(get_db),
@@ -68,19 +73,20 @@ async def get_progress_history(
     """Get progress history."""
     if settings.require_auth_for_progress and current_user is None:
         raise HTTPException(401, "Authentication required")
-    
+
+    scope = require_request_scope(request, current_user)
     query = db.query(ProgressEntry)
-    if current_user is not None:
-        query = query.filter(ProgressEntry.user_id == current_user.id)
-    elif settings.require_auth_for_progress:
-        query = query.filter(ProgressEntry.user_id == -1)
+    if scope.user_id is not None:
+        query = query.filter(ProgressEntry.user_id == scope.user_id)
+    else:
+        query = query.filter(ProgressEntry.guest_session_id == scope.guest_session_id)
     
     if exercise_id:
         query = query.filter(ProgressEntry.exercise_id == exercise_id)
     
     # Add date filter
     from datetime import timedelta
-    cutoff = datetime.utcnow() - timedelta(days=days)
+    cutoff = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=days)
     query = query.filter(ProgressEntry.created_at >= cutoff)
     
     entries = query.order_by(ProgressEntry.created_at.desc()).all()
@@ -120,18 +126,22 @@ def calculate_consistency(entries: List[ProgressEntry], days: int) -> dict:
 @router.get("/exercise/{exercise_id}/progress")
 async def get_exercise_progress(
     exercise_id: int,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User | None = Depends(get_optional_current_user),
 ):
     """Get progress for a specific exercise over time."""
     if settings.require_auth_for_progress and current_user is None:
         raise HTTPException(401, "Authentication required")
-    
+
+    scope = require_request_scope(request, current_user)
     query = db.query(ProgressEntry).filter(
         ProgressEntry.exercise_id == exercise_id
     )
-    if current_user is not None:
-        query = query.filter(ProgressEntry.user_id == current_user.id)
+    if scope.user_id is not None:
+        query = query.filter(ProgressEntry.user_id == scope.user_id)
+    else:
+        query = query.filter(ProgressEntry.guest_session_id == scope.guest_session_id)
     entries = query.order_by(ProgressEntry.created_at).all()
     
     # Calculate 1RM estimates using Epley formula
