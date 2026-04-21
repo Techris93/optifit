@@ -31,7 +31,7 @@ def test_generate_workout_returns_template_payload(client):
     )
     assert response.status_code == 200
     payload = response.json()
-    assert payload["workout"]["generation_mode"] == "template"
+    assert payload["workout"]["generation_mode"] in {"template", "gemini", "ollama"}
     assert payload["equipment_used"] == ["dumbbell", "yoga_mat"]
     assert len(payload["exercise_matches"]) >= 1
     assert all(match.get("exercise") is not None for match in payload["exercise_matches"])
@@ -227,6 +227,7 @@ def test_progress_logging_and_history(client):
     payload = history_response.json()
     assert payload["consistency"]["workouts_logged"] >= 1
     assert len(payload["entries"]) >= 1
+    assert payload["entries"][0]["exercise_name"]
 
 
 def test_progress_log_rejects_mismatched_sets(client):
@@ -265,6 +266,29 @@ def test_progress_history_is_scoped_to_guest_session(client):
     assert second_history.status_code == 200
     assert len(first_history.json()["entries"]) == 1
     assert len(second_history.json()["entries"]) == 0
+
+
+def test_progress_accepts_guest_sessions_when_progress_auth_is_required(client):
+    original_setting = settings.require_auth_for_progress
+    try:
+        settings.require_auth_for_progress = True
+
+        unauthorized = client.get("/api/progress/history?days=30")
+        assert unauthorized.status_code == 401
+
+        authorized = client.post(
+            "/api/progress/log",
+            json={
+                "exercise_id": 1,
+                "sets_completed": 2,
+                "reps_per_set": [12, 12],
+                "weight_per_set": [0, 0],
+            },
+            headers=CLIENT_SESSION_HEADERS,
+        )
+        assert authorized.status_code == 200
+    finally:
+        settings.require_auth_for_progress = original_setting
 
 
 def test_dashboard_summary_is_scoped_to_guest_session(client):

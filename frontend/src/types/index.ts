@@ -95,6 +95,7 @@ export interface Equipment {
 export interface ProgressEntry {
   id: number
   exercise_id: number
+  exercise_name?: string | null
   workout_id?: number | null
   sets_completed: number
   reps_per_set: number[]

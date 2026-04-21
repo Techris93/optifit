@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ChevronRight, Clock, Dumbbell, RefreshCw, Save, Target } from 'lucide-react'
+import { Clock, Dumbbell, RefreshCw, Save, Target } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
 import ExerciseAnimationCard from '../components/animation/ExerciseAnimationCard'
 import VisionStatusBadge from '../components/VisionStatusBadge'
@@ -94,16 +94,31 @@ export default function WorkoutGenerator() {
   const focusOptions = ['chest', 'back', 'legs', 'shoulders', 'core', 'glutes']
 
   return (
-    <div>
-      <div className="card page-hero-card">
-        <div className="hero-shell hero-shell-text-only">
-          <div className="hero-content">
-            <div className="hero-kicker">Plan with precision</div>
-            <h1>Workout Builder</h1>
-            <p className="hero-copy">Choose available equipment, set your training objective, and generate a session you can run immediately with practical sets, reps, and rest timings.</p>
-            <div className="page-status-row">
-              <VisionStatusBadge mode={source === 'scan' ? detectionMode : 'manual'} />
-            </div>
+    <div className="feature-page">
+      <div className="card page-hero-card feature-intro-card">
+        <div className="feature-intro-header">
+          <div className="page-status-row">
+            <VisionStatusBadge mode={source === 'scan' ? detectionMode : 'manual'} />
+          </div>
+          <div className="hero-kicker">Plan with precision</div>
+          <h1>Workout Builder</h1>
+          <p className="hero-copy">
+            Choose available equipment, set your training objective, and generate a session you can run immediately
+            with practical sets, reps, and rest timings.
+          </p>
+        </div>
+        <div className="feature-stat-strip">
+          <div className="feature-stat-chip">
+            <strong>{equipment.length}</strong>
+            <span>Gear items</span>
+          </div>
+          <div className="feature-stat-chip">
+            <strong>{duration}</strong>
+            <span>Minutes</span>
+          </div>
+          <div className="feature-stat-chip">
+            <strong>{focusAreas.length || 'Open'}</strong>
+            <span>Focus</span>
           </div>
         </div>
       </div>
@@ -111,7 +126,14 @@ export default function WorkoutGenerator() {
       {!result ? (
         <>
           <div className="card">
-          <div className="card-title">1. Pick Your Equipment</div>
+            <div className="section-heading-row">
+              <div>
+                <div className="card-title zero-margin">1. Pick Your Equipment</div>
+                <p className="card-subtitle">
+                  Only workouts compatible with the equipment you keep selected will be proposed.
+                </p>
+              </div>
+            </div>
             <p className="muted-paragraph">
               {source === 'scan'
                 ? 'These selections came from your upload scan. Confirm or edit them before generating the workout.'
@@ -160,7 +182,12 @@ export default function WorkoutGenerator() {
           </div>
 
           <div className="card">
-            <div className="card-title">2. Set Your Goal</div>
+            <div className="section-heading-row">
+              <div>
+                <div className="card-title zero-margin">2. Set Your Goal</div>
+                <p className="card-subtitle">Tune the session for the outcome you want and the time you actually have.</p>
+              </div>
+            </div>
 
             <div className="preference-grid">
               <div>
@@ -298,7 +325,7 @@ function WorkoutResult({
   const { workout, exercise_matches: exerciseMatches } = result
 
   return (
-    <div className="card">
+    <div className="card workout-result-card">
       <div className="result-header">
         <div>
           <h2>{workout.name}</h2>
@@ -309,6 +336,40 @@ function WorkoutResult({
           <span className="status-badge secondary">{workout.estimated_duration_minutes} min</span>
         </div>
       </div>
+
+      <div className="feature-stat-strip">
+        <div className="feature-stat-chip">
+          <strong>{exerciseMatches.length}</strong>
+          <span>Main exercises</span>
+        </div>
+        <div className="feature-stat-chip">
+          <strong>{result.equipment_used.length}</strong>
+          <span>Equipment types</span>
+        </div>
+        <div className="feature-stat-chip">
+          <strong>{goal.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())}</strong>
+          <span>Primary goal</span>
+        </div>
+      </div>
+
+      <div className="equipment-tags">
+        {result.equipment_used.map((item) => (
+          <span key={item} className="equipment-tag selected">
+            {item.replace(/_/g, ' ')}
+          </span>
+        ))}
+      </div>
+
+      {workout.training_tips && workout.training_tips.length > 0 && (
+        <div className="delivery-box">
+          <div><strong>Training tips</strong></div>
+          <div className="feature-note-list">
+            {workout.training_tips.map((tip) => (
+              <span key={tip} className="feature-note-chip">{tip}</span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {workout.warmup && workout.warmup.length > 0 && (
         <section className="result-section">
@@ -410,7 +471,10 @@ function WorkoutExerciseCard({ match, index }: { match: WorkoutExerciseMatch; in
                 <span>{match.rest_seconds}s rest</span>
               </div>
             </div>
-            <ChevronRight size={18} color="var(--text-muted)" />
+            <div className="result-badges">
+              <span className="status-badge secondary">{schemeText}</span>
+              <span className="status-badge">{match.rest_seconds}s rest</span>
+            </div>
           </div>
 
           {((match.exercise?.description && !match.exercise.description.includes('Auto-created canonical')) || match.notes) && (

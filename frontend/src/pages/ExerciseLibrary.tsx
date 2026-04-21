@@ -50,19 +50,42 @@ export default function ExerciseLibrary() {
     void loadExercises()
   }
 
+  const activeFilterCount = [search, muscleGroup, difficulty].filter(Boolean).length
+
   return (
-    <div>
-      <div className="card page-hero-card">
-        <div className="hero-shell hero-shell-text-only">
-          <div className="hero-content">
-            <div className="hero-kicker">Find and learn</div>
-            <h1>Exercise Library</h1>
-            <p className="hero-copy">Search movements by muscle group and difficulty, then review form guidance and media without leaving your workout flow.</p>
+    <div className="feature-page">
+      <div className="card page-hero-card feature-intro-card">
+        <div className="feature-intro-header">
+          <div className="hero-kicker">Find and learn</div>
+          <h1>Exercise Library</h1>
+          <p className="hero-copy">
+            Search movements by muscle group and difficulty, then review the demo, setup notes, and coaching cues
+            without leaving the workout flow.
+          </p>
+        </div>
+        <div className="feature-stat-strip">
+          <div className="feature-stat-chip">
+            <strong>{loading ? '...' : exercises.length}</strong>
+            <span>Matches</span>
+          </div>
+          <div className="feature-stat-chip">
+            <strong>{muscleGroups.length}</strong>
+            <span>Muscle groups</span>
+          </div>
+          <div className="feature-stat-chip">
+            <strong>{activeFilterCount}</strong>
+            <span>Active filters</span>
           </div>
         </div>
       </div>
 
       <div className="card">
+        <div className="section-heading-row">
+          <div>
+            <div className="card-title zero-margin">Search the library</div>
+            <p className="card-subtitle">Filter by focus area, difficulty, or a direct movement name.</p>
+          </div>
+        </div>
         <form onSubmit={handleSearch}>
           <div className="search-row">
             <div className="search-input-wrap">
@@ -111,9 +134,21 @@ export default function ExerciseLibrary() {
 
       {loading ? (
         <div className="spinner" />
+      ) : exercises.length === 0 ? (
+        <div className="card feature-empty-state">
+          <div className="card-title zero-margin">No exercises matched this search</div>
+          <p className="card-subtitle">Try a different keyword or remove one of the active filters.</p>
+        </div>
       ) : (
         <div>
-          <p className="helper-text mb-16">Showing {exercises.length} exercises</p>
+          <div className="card feature-list-intro">
+            <div className="section-heading-row">
+              <div>
+                <div className="card-title zero-margin">Results</div>
+                <p className="card-subtitle">Showing {exercises.length} movement{exercises.length === 1 ? '' : 's'} ready for review.</p>
+              </div>
+            </div>
+          </div>
 
           {exercises.map((exercise) => (
             <ExerciseLibraryCard

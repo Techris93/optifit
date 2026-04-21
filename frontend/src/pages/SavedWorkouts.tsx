@@ -103,15 +103,17 @@ export default function SavedWorkouts() {
   }, [selectedWorkout])
 
   return (
-    <div>
+    <div className="feature-page">
       <section className="card page-hero-card">
         <div className="hero-shell">
           <div className="hero-content">
-            <div className="hero-kicker">Owned and scoped</div>
-            <h1>Saved Workouts</h1>
+            <div className="hero-kicker">Saved and ready</div>
+            <h1>Saved Sessions</h1>
             <p className="hero-copy">
-              This view is now bound to the current user or guest session, so you can safely review only the workouts that belong to this scope.
+              Reopen the workouts you generated, inspect the prescription, and rebuild a fresh session from the same
+              equipment setup whenever you are ready to train again.
             </p>
+            <p className="card-subtitle">Each list is isolated to this device session or signed-in account.</p>
             <div className="page-status-row saved-hero-actions">
               <button type="button" className="btn btn-secondary" onClick={() => void loadWorkouts()} disabled={loading || detailLoading}>
                 <RefreshCw size={16} className={loading || detailLoading ? 'spinning' : ''} />
@@ -126,7 +128,7 @@ export default function SavedWorkouts() {
           <div className="saved-hero-stat-card">
             <div className="saved-hero-stat-label">Saved sessions</div>
             <strong>{workouts.length}</strong>
-            <span>Scoped to this current session or signed-in account.</span>
+            <span>Ready to reopen, review, or regenerate from the same setup.</span>
           </div>
         </div>
       </section>
@@ -141,9 +143,9 @@ export default function SavedWorkouts() {
       ) : workouts.length === 0 ? (
         <section className="card saved-workout-empty-state">
           <Archive size={28} />
-          <h2>No saved workouts yet</h2>
+          <h2>No saved sessions yet</h2>
           <p>
-            Generate a workout first, then save it. Once saved, it will appear here and stay isolated to the correct owner scope.
+            Generate a workout first, then save it. Once stored, it will appear here and stay scoped to this current session or account.
           </p>
           <Link to="/workouts" className="btn btn-primary btn-large">
             Build your first workout
@@ -153,7 +155,10 @@ export default function SavedWorkouts() {
         <section className="saved-workouts-layout">
           <aside className="card saved-workout-sidebar">
             <div className="saved-workout-sidebar-header">
-              <div className="card-title">Saved Session List</div>
+              <div>
+                <div className="card-title zero-margin">Saved Session List</div>
+                <p className="card-subtitle">Pick a stored plan to inspect the exact exercise prescription.</p>
+              </div>
               <span>{workouts.length} total</span>
             </div>
 
@@ -223,6 +228,10 @@ export default function SavedWorkouts() {
                   <div className="saved-meta-chip">
                     <Archive size={15} />
                     Saved {formatSavedDate(selectedWorkout.created_at)}
+                  </div>
+                  <div className="saved-meta-chip">
+                    <Dumbbell size={15} />
+                    {(selectedWorkout.exercises ?? []).length} exercises
                   </div>
                 </div>
 

@@ -12,6 +12,12 @@ import type { DetectionResult, HealthStatus } from '../types'
 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
 const apiBaseUrl = apiUrl.endsWith('/api') ? apiUrl.slice(0, -4) : apiUrl
 const maxUploadSizeBytes = 8 * 1024 * 1024
+const scanTips = [
+  'Take one wide shot of the full room.',
+  'Add one or two close-ups for smaller equipment.',
+  'Keep the space well lit and clutter low.',
+  'A short panning video works well for home gyms.',
+]
 
 export default function EquipmentScan() {
   const [files, setFiles] = useState<File[]>([])
@@ -111,16 +117,31 @@ export default function EquipmentScan() {
   }
 
   return (
-    <div>
-      <div className="card page-hero-card">
-        <div className="hero-shell hero-shell-text-only">
-          <div className="hero-content">
-            <div className="hero-kicker">Capture and confirm</div>
-            <h1>Scan Your Equipment</h1>
-            <p className="hero-copy">Upload a few clear photos or a short video of the equipment available right now. Review the detected items, then generate a workout that fits what is actually there.</p>
-            <div className="page-status-row">
-              <VisionStatusBadge mode={result?.detection_mode ?? health?.detection_mode ?? 'manual'} />
-            </div>
+    <div className="feature-page">
+      <div className="card page-hero-card feature-intro-card">
+        <div className="feature-intro-header">
+          <div className="page-status-row">
+            <VisionStatusBadge mode={result?.detection_mode ?? health?.detection_mode ?? 'manual'} />
+          </div>
+          <div className="hero-kicker">Capture and confirm</div>
+          <h1>Scan what is available, build a plan, and keep the work measurable.</h1>
+          <p className="hero-copy">
+            Upload a few clear photos or a short video of the equipment around you. Review the detected list,
+            trim anything incorrect, and send a clean setup straight into workout generation.
+          </p>
+        </div>
+        <div className="feature-stat-strip">
+          <div className="feature-stat-chip">
+            <strong>{result?.files_processed ?? files.length}</strong>
+            <span>Files ready</span>
+          </div>
+          <div className="feature-stat-chip">
+            <strong>{confirmedEquipment.length}</strong>
+            <span>Equipment found</span>
+          </div>
+          <div className="feature-stat-chip">
+            <strong>{maxUploadSizeBytes / (1024 * 1024)} MB</strong>
+            <span>Per file</span>
           </div>
         </div>
       </div>
@@ -128,7 +149,14 @@ export default function EquipmentScan() {
       {!result ? (
         <>
           <div className="card">
-            <div className="card-title">Upload Analysis</div>
+            <div className="section-heading-row">
+              <div>
+                <div className="card-title zero-margin">Start AI Scan</div>
+                <p className="card-subtitle">
+                  Add up to 5 photos or short videos, then review the detected equipment before building the session.
+                </p>
+              </div>
+            </div>
             <div {...getRootProps()} className={`dropzone ${isDragActive ? 'active' : ''}`}>
               <input {...getInputProps()} />
               <div className="dropzone-icon">
@@ -186,38 +214,45 @@ export default function EquipmentScan() {
               </div>
             </div>
 
-            <button
-              className="btn btn-primary btn-large full-width top-gap-20"
-              onClick={handleScan}
-              disabled={files.length === 0 || loading}
-            >
-              {loading ? (
-                <>
-                  <RefreshCw size={18} className="spinning" />
-                  Analyzing Equipment...
-                </>
-              ) : (
-                <>
-                  <Upload size={18} />
-                  Scan Equipment
-                </>
-              )}
-            </button>
+            <div className="scan-upload-actions">
+              <button
+                className="btn btn-primary btn-large full-width"
+                onClick={handleScan}
+                disabled={files.length === 0 || loading}
+              >
+                {loading ? (
+                  <>
+                    <RefreshCw size={18} className="spinning" />
+                    Analyzing Equipment...
+                  </>
+                ) : (
+                  <>
+                    <Upload size={18} />
+                    Scan Equipment
+                  </>
+                )}
+              </button>
 
-            <Link to="/workouts" className="btn btn-secondary btn-large full-width top-gap-12">
-              Skip Upload and Pick Equipment Manually
-            </Link>
+              <Link to="/workouts" className="btn btn-secondary btn-large full-width">
+                Skip Upload and Pick Equipment Manually
+              </Link>
+            </div>
           </div>
 
           <div className="card">
-            <div className="card-title">Tips for best results</div>
-            <ul className="scan-tips-list">
-              <li>Take photos from multiple angles.</li>
-              <li>Ensure the room is well lit.</li>
-              <li>Include all equipment in frame.</li>
-              <li>For home gyms, a short panning video works well.</li>
-              <li>One wide room shot plus one or two close-up photos is usually enough.</li>
-            </ul>
+            <div className="section-heading-row">
+              <div>
+                <div className="card-title zero-margin">Tips for best results</div>
+                <p className="card-subtitle">A little capture discipline gives the detector a much cleaner equipment list.</p>
+              </div>
+            </div>
+            <div className="scan-tips-grid">
+              {scanTips.map((tip) => (
+                <div key={tip} className="scan-tip-card">
+                  {tip}
+                </div>
+              ))}
+            </div>
           </div>
         </>
       ) : (

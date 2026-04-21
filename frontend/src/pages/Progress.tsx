@@ -24,6 +24,7 @@ export default function Progress() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const selectedExerciseName = exerciseOptions.find((exercise) => exercise.id === exerciseId)?.name
 
   const loadHistory = async (days: number) => {
     setLoading(true)
@@ -89,7 +90,8 @@ export default function Progress() {
         notes,
       })
       setNotes('')
-      setSuccessMessage('Session saved.')
+      setSetRows(createSetRows(3))
+      setSuccessMessage(selectedExerciseName ? `${selectedExerciseName} saved.` : 'Session saved.')
       await loadHistory(Number(timeRange))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save progress')
@@ -119,19 +121,36 @@ export default function Progress() {
   }
 
   return (
-    <div>
-      <div className="card page-hero-card">
-        <div className="hero-shell hero-shell-text-only">
-          <div className="hero-content">
-            <div className="hero-kicker">Measure consistency</div>
-            <h1>Progress Tracking</h1>
-            <p className="hero-copy">Log each session, track volume trends, and keep recent activity visible so progression stays objective.</p>
+    <div className="feature-page">
+      <div className="card page-hero-card feature-intro-card">
+        <div className="feature-intro-header">
+          <div className="hero-kicker">Measure consistency</div>
+          <h1>Progress Tracking</h1>
+          <p className="hero-copy">Log each session, track volume trends, and keep recent activity visible so progression stays objective.</p>
+        </div>
+        <div className="feature-stat-strip">
+          <div className="feature-stat-chip">
+            <strong>{history?.consistency.workouts_logged ?? 0}</strong>
+            <span>Logged sessions</span>
+          </div>
+          <div className="feature-stat-chip">
+            <strong>{history?.consistency.unique_workout_days ?? 0}</strong>
+            <span>Active days</span>
+          </div>
+          <div className="feature-stat-chip">
+            <strong>{consistencyRate}%</strong>
+            <span>Consistency</span>
           </div>
         </div>
       </div>
 
       <div className="card">
-        <div className="card-title">Log a Session</div>
+        <div className="section-heading-row">
+          <div>
+            <div className="card-title zero-margin">Log a Session</div>
+            <p className="card-subtitle">Capture the exact sets, reps, and load so your recent training window stays measurable.</p>
+          </div>
+        </div>
         <div className="preference-grid">
           <div>
             <label className="field-label">Exercise</label>
@@ -210,7 +229,12 @@ export default function Progress() {
         </div>
 
         {error && <div className="card error-card top-gap-16">{error}</div>}
-        {successMessage && <div className="card top-gap-16">{successMessage}</div>}
+        {successMessage && (
+          <div className="card top-gap-16 feature-success-card">
+            <strong>{successMessage}</strong>
+            <p className="card-subtitle">Your latest session is now reflected in the activity feed and consistency metrics.</p>
+          </div>
+        )}
 
         <button type="button" className="btn btn-primary top-gap-16" onClick={submitLog} disabled={submitting}>
           {submitting ? 'Saving...' : 'Save Progress'}
@@ -218,6 +242,12 @@ export default function Progress() {
       </div>
 
       <div className="card">
+        <div className="section-heading-row">
+          <div>
+            <div className="card-title zero-margin">Training Snapshot</div>
+            <p className="card-subtitle">A quick view of your recent work inside the current time window.</p>
+          </div>
+        </div>
         <div className="stats-grid">
           <StatCard icon={<Calendar size={24} color="var(--primary)" />} value={history?.consistency.workouts_logged ?? 0} label="Logged Sessions" />
           <StatCard icon={<TrendingUp size={24} color="var(--secondary)" />} value={`${history?.total_volume.total_volume ?? 0} ${history?.total_volume.unit ?? 'kg'}`} label="Total Volume" />
@@ -237,7 +267,10 @@ export default function Progress() {
 
       <div className="card">
         <div className="result-header">
-          <div className="card-title zero-margin">Recent Activity</div>
+          <div>
+            <div className="card-title zero-margin">Recent Activity</div>
+            <p className="card-subtitle">Last {timeRange} days</p>
+          </div>
           <select className="field-control compact-control" value={timeRange} onChange={(event) => setTimeRange(event.target.value)}>
             <option value="7">Last 7 days</option>
             <option value="30">Last 30 days</option>
@@ -248,26 +281,31 @@ export default function Progress() {
         {loading ? (
           <div className="spinner" />
         ) : latestEntries.length === 0 ? (
-          <p className="muted-paragraph">No workouts logged in this period yet.</p>
+          <div className="feature-empty-state top-gap-16">
+            <div className="card-title zero-margin">No workouts logged in this period yet.</div>
+            <p className="card-subtitle">Log a session above to start tracking consistency, volume, and recent activity.</p>
+          </div>
         ) : (
-          latestEntries.map((entry) => (
-            <div key={entry.id} className="exercise-card">
-              <div className="exercise-header">
-                <div className="exercise-name">
-                  {exerciseOptions.find((exercise) => exercise.id === entry.exercise_id)?.name || `Exercise #${entry.exercise_id}`}
+          <div className="progress-activity-list">
+            {latestEntries.map((entry) => (
+              <div key={entry.id} className="exercise-card progress-entry-card">
+                <div className="exercise-header">
+                  <div className="exercise-name">
+                    {entry.exercise_name || exerciseOptions.find((exercise) => exercise.id === entry.exercise_id)?.name || `Exercise #${entry.exercise_id}`}
+                  </div>
+                  <div className="exercise-meta">
+                    <span>{new Date(entry.created_at).toLocaleDateString()}</span>
+                  </div>
                 </div>
                 <div className="exercise-meta">
-                  <span>{new Date(entry.created_at).toLocaleDateString()}</span>
+                  <span>{entry.sets_completed} sets</span>
+                  <span>{entry.reps_per_set.join(', ')} reps</span>
+                  <span>{entry.weight_per_set.join(', ')} {entry.weight_unit}</span>
                 </div>
+                {entry.notes && <p className="muted-paragraph top-gap-8">{entry.notes}</p>}
               </div>
-              <div className="exercise-meta">
-                <span>{entry.sets_completed} sets</span>
-                <span>{entry.reps_per_set.join(', ')} reps</span>
-                <span>{entry.weight_per_set.join(', ')} {entry.weight_unit}</span>
-              </div>
-              {entry.notes && <p className="muted-paragraph top-gap-8">{entry.notes}</p>}
-            </div>
-          ))
+            ))}
+          </div>
         )}
       </div>
     </div>

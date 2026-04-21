@@ -5,11 +5,34 @@ from typing import List, Optional
 from datetime import UTC, datetime
 
 from app.config import settings
-from app.models.database import User, get_db, ProgressEntry
+from app.models.database import Exercise, User, get_db, ProgressEntry
 from app.routers.auth import get_optional_current_user
-from app.session_scope import require_request_scope
+from app.session_scope import get_request_scope, require_request_scope
 
 router = APIRouter()
+
+
+def _scoped_progress_query(db: Session, scope):
+    query = db.query(ProgressEntry)
+    if scope.user_id is not None:
+        return query.filter(ProgressEntry.user_id == scope.user_id)
+    return query.filter(ProgressEntry.guest_session_id == scope.guest_session_id)
+
+
+def _serialize_progress_entry(entry: ProgressEntry, exercise_name: str | None = None) -> dict:
+    return {
+        "id": entry.id,
+        "exercise_id": entry.exercise_id,
+        "exercise_name": exercise_name,
+        "workout_id": entry.workout_id,
+        "sets_completed": entry.sets_completed,
+        "reps_per_set": entry.reps_per_set,
+        "weight_per_set": entry.weight_per_set,
+        "weight_unit": entry.weight_unit,
+        "notes": entry.notes,
+        "perceived_difficulty": entry.perceived_difficulty,
+        "created_at": entry.created_at,
+    }
 
 class ProgressCreate(BaseModel):
     exercise_id: int = Field(gt=0)
@@ -39,7 +62,7 @@ async def log_progress(
     current_user: User | None = Depends(get_optional_current_user),
 ):
     """Log a workout session."""
-    if settings.require_auth_for_progress and current_user is None:
+    if settings.require_auth_for_progress and get_request_scope(request, current_user) is None:
         raise HTTPException(401, "Authentication required")
 
     scope = require_request_scope(request, current_user)
@@ -71,15 +94,11 @@ async def get_progress_history(
     current_user: User | None = Depends(get_optional_current_user),
 ):
     """Get progress history."""
-    if settings.require_auth_for_progress and current_user is None:
+    if settings.require_auth_for_progress and get_request_scope(request, current_user) is None:
         raise HTTPException(401, "Authentication required")
 
     scope = require_request_scope(request, current_user)
-    query = db.query(ProgressEntry)
-    if scope.user_id is not None:
-        query = query.filter(ProgressEntry.user_id == scope.user_id)
-    else:
-        query = query.filter(ProgressEntry.guest_session_id == scope.guest_session_id)
+    query = _scoped_progress_query(db, scope)
     
     if exercise_id:
         query = query.filter(ProgressEntry.exercise_id == exercise_id)
@@ -90,9 +109,18 @@ async def get_progress_history(
     query = query.filter(ProgressEntry.created_at >= cutoff)
     
     entries = query.order_by(ProgressEntry.created_at.desc()).all()
+    exercise_names = {}
+    if entries:
+        exercise_ids = list({entry.exercise_id for entry in entries})
+        exercise_rows = (
+            db.query(Exercise.id, Exercise.name)
+            .filter(Exercise.id.in_(exercise_ids))
+            .all()
+        )
+        exercise_names = {exercise_id: exercise_name for exercise_id, exercise_name in exercise_rows}
     
     return {
-        "entries": entries,
+        "entries": [_serialize_progress_entry(entry, exercise_names.get(entry.exercise_id)) for entry in entries],
         "total_volume": calculate_total_volume(entries),
         "consistency": calculate_consistency(entries, days)
     }
@@ -131,7 +159,7 @@ async def get_exercise_progress(
     current_user: User | None = Depends(get_optional_current_user),
 ):
     """Get progress for a specific exercise over time."""
-    if settings.require_auth_for_progress and current_user is None:
+    if settings.require_auth_for_progress and get_request_scope(request, current_user) is None:
         raise HTTPException(401, "Authentication required")
 
     scope = require_request_scope(request, current_user)
