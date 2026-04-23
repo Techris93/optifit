@@ -34,6 +34,8 @@ def test_generate_workout_returns_template_payload(client):
     assert payload["workout"]["generation_mode"] in {"template", "gemini", "ollama"}
     assert payload["equipment_used"] == ["dumbbell", "yoga_mat"]
     assert len(payload["exercise_matches"]) >= 1
+    assert payload["plan_review"]["confidence"] in {"high", "medium", "low"}
+    assert payload["plan_review"]["report_path"]
     assert all(match.get("exercise") is not None for match in payload["exercise_matches"])
     assert all((match.get("exercise_id") or 0) > 0 for match in payload["exercise_matches"])
 
@@ -206,6 +208,20 @@ def test_community_templates_route_remains_reachable(client):
     assert response.status_code == 200
     payload = response.json()
     assert any(template["name"] == "Community Dumbbell Starter" for template in payload)
+
+
+def test_latest_workout_reviews_route_returns_review_artifacts(client):
+    generation = client.post(
+        "/api/workouts/generate?goal=strength&difficulty=beginner&duration=30",
+        json={"equipment": ["dumbbell", "yoga_mat"], "user_preferences": {"injuries": "mild shoulder irritation"}},
+    )
+    assert generation.status_code == 200
+
+    response = client.get("/api/workouts/reviews/latest?limit=3")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["reviews"]
+    assert payload["reviews"][0]["report_path"]
 
 
 def test_progress_logging_and_history(client):

@@ -13,6 +13,7 @@ from app.routers.auth import get_optional_current_user
 from app.session_scope import require_request_scope
 from app.services.workout_generator import WorkoutGenerator
 from app.services.exercise_media_service import exercise_media_service
+from app.services.workout_review import latest_reviews, review_workout_plan
 
 router = APIRouter()
 
@@ -375,10 +376,19 @@ async def generate_workout(
 
     db.commit()
     workout_data["exercises"] = normalized_exercises
+    plan_review = review_workout_plan(
+        workout=workout_data,
+        equipment=payload.equipment,
+        goal=goal,
+        difficulty=difficulty,
+        focus_areas=payload.focus_areas,
+        user_preferences=payload.user_preferences,
+    )
 
     return {
         "workout": workout_data,
         "exercise_matches": exercise_matches,
+        "plan_review": plan_review,
         "generated_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         "equipment_used": payload.equipment,
         "ai_provider": workout_data.get("ai_provider", "template"),
@@ -484,6 +494,12 @@ async def get_community_templates(
 
     templates = query.limit(20).all()
     return templates
+
+
+@router.get("/reviews/latest")
+async def get_latest_workout_reviews(limit: int = 10):
+    """Return the most recent workout plan review artifacts."""
+    return {"reviews": latest_reviews(limit=min(max(limit, 1), 25))}
 
 
 @router.get("/{workout_id}")
