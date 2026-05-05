@@ -88,7 +88,7 @@ def _multipliers(readiness: int) -> tuple[float, float, str]:
     return 1.05, 0.95, "push"
 
 
-def _weakest_root(focus_areas: Optional[List[str]], inputs: Dict[str, Any]) -> str:
+def _priority_limiter(focus_areas: Optional[List[str]], inputs: Dict[str, Any]) -> str:
     if float(inputs["soreness"]) >= 7:
         return "tissue recovery"
     if float(inputs["sleep_hours"]) < 6.5:
@@ -112,7 +112,7 @@ def build_adaptive_recovery_engine(
     inputs = _readiness_inputs(user_preferences)
     readiness = _readiness_score(inputs, difficulty)
     volume_multiplier, rest_multiplier, action_state = _multipliers(readiness)
-    weakest_root = _weakest_root(focus_areas, inputs)
+    priority_limiter = _priority_limiter(focus_areas, inputs)
     missed = float(inputs["missed_sessions"])
 
     if readiness < 45:
@@ -129,7 +129,7 @@ def build_adaptive_recovery_engine(
         recovery_protocol = "Progress normally while keeping one rep or interval in reserve."
 
     preferred_time = str(inputs["preferred_training_time"])
-    circadian_window = {
+    timing_window = {
         "morning": "Train after a longer warm-up and keep explosive work after temperature rises.",
         "afternoon": "Use the main strength block here; coordination and temperature are usually favorable.",
         "evening": "Keep the cool-down longer so sleep is protected after training.",
@@ -147,24 +147,24 @@ def build_adaptive_recovery_engine(
         "volume_multiplier": volume_multiplier,
         "rest_multiplier": rest_multiplier,
         "adjusted_duration_minutes": max(15, round(duration_minutes * (0.75 if readiness < 45 else 0.9 if readiness < 65 else 1.0))),
-        "homeostasis": {
+        "range_control": {
             "status": "protect" if readiness < 65 else "stable",
             "target": "Keep effort inside a recoverable range before chasing more load.",
         },
-        "hormesis": {
+        "training_dose": {
             "dose": hormone_dose,
             "target": "Apply enough stress to adapt without overwhelming recovery.",
         },
-        "circadian_rhythm": {
+        "timing_guidance": {
             "preferred_training_time": preferred_time,
-            "timing_note": circadian_window,
+            "timing_note": timing_window,
         },
-        "supercompensation": {
+        "recovery_rebound": {
             "status": "wait_for_rebound" if readiness < 65 else "train_on_rebound",
             "note": recovery_protocol,
         },
         "energy_budgeting": energy_budget,
-        "weakest_root": weakest_root,
+        "priority_limiter": priority_limiter,
         "recovery_protocol": recovery_protocol,
         "safeguards": [
             "Stop a set when form speed or joint comfort drops sharply.",
@@ -177,45 +177,45 @@ def build_adaptive_recovery_engine(
             "Is soreness changing movement quality or confidence?",
         ],
         "coaching_tone": "gentle and recovery-first" if readiness < 65 else "confident and progressive",
-        "biological_signals": [
+        "adaptation_signals": [
             {
-                "model": "Immune system",
+                "model": "Recovery risk detection",
                 "application": "Detect overtraining, injury risk, and poor recovery before loading the session.",
             },
             {
-                "model": "Ant colonies",
-                "application": "Use repeated successful sessions as evidence trails for future progressions.",
+                "model": "Progression evidence",
+                "application": "Use repeated successful sessions as confidence signals for future progressions.",
             },
             {
-                "model": "Mycelium networks",
+                "model": "Readiness integration",
                 "application": "Connect sleep, soreness, mood, nutrition, and recent load into one readiness view.",
             },
             {
-                "model": "Flocking birds",
+                "model": "Cohort scaling",
                 "application": "Keep group or cohort work aligned by scaling intensity from simple local readiness rules.",
             },
             {
-                "model": "Predator-prey cycles",
+                "model": "Plateau variation",
                 "application": "Break plateaus by changing stress when adaptation stalls.",
             },
             {
-                "model": "Skin",
+                "model": "Safety guardrails",
                 "application": "Use recovery-first safeguards as the outer barrier for training decisions.",
             },
             {
-                "model": "Circadian rhythm",
-                "application": "Match training and recovery nudges to the user's best biological window.",
+                "model": "Training-window timing",
+                "application": "Match training and recovery nudges to the user's preferred training window.",
             },
             {
-                "model": "Tree roots",
-                "application": f"Feed the weakest root first: {weakest_root}.",
+                "model": "Priority limiter",
+                "application": f"Address the main limiter first: {priority_limiter}.",
             },
             {
-                "model": "Echolocation",
+                "model": "Readiness checks",
                 "application": "Ask short readiness checks before committing to the main workload.",
             },
             {
-                "model": "Octopus camouflage",
+                "model": "Coaching tone adaptation",
                 "application": "Adapt coaching tone to the user's recovery and motivation state.",
             },
         ],

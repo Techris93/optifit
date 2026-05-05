@@ -49,10 +49,10 @@ optifit/
 
 ## Adaptive Recovery Engine
 
-The workout builder now copies biological operating systems to make safer training decisions:
+The workout builder now uses readiness intelligence to make safer training decisions:
 
 - Sensing: sleep, soreness, mood, HRV trend, recent load, missed sessions, nutrition, timing, and focus areas
-- Memory-ready signals: similar-user paths, plateau variation, cohort scaling, and biological signal coverage
+- Memory-ready signals: similar-user paths, plateau variation, cohort scaling, and decision signal coverage
 - Adaptation: readiness score, action state, volume multiplier, rest multiplier, adjusted duration, and coaching tone
 - Containment: recovery-first safeguards when readiness drops
 - Regeneration: recovery protocol, energy budget, and micro-assessments before the main workload

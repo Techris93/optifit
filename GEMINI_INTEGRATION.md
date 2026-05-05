@@ -170,7 +170,7 @@ Query Parameters:
   - duration: 15-120 (minutes)
 ```
 
-The response includes `adaptive_recovery` with readiness score, action state, volume/rest multipliers, recovery protocol, energy budget, micro-assessments, and biological signal coverage.
+The response includes `adaptive_recovery` with readiness score, action state, volume/rest multipliers, recovery protocol, energy budget, micro-assessments, and decision signal coverage.
 
 ### Equipment Detection
 

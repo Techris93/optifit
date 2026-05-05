@@ -619,16 +619,16 @@ function RecoveryDashboard({ recovery }: { recovery: AdaptiveRecovery }) {
           <span>Rest</span>
         </div>
         <div className="feature-stat-chip">
-          <strong>{recovery.weakest_root}</strong>
-          <span>Weakest root</span>
+          <strong>{recovery.priority_limiter}</strong>
+          <span>Priority limiter</span>
         </div>
       </div>
 
       <div className="delivery-box">
-        <div><strong>Homeostasis:</strong> {recovery.homeostasis.target}</div>
-        <div><strong>Hormesis:</strong> {recovery.hormesis.dose}</div>
-        <div><strong>Circadian timing:</strong> {recovery.circadian_rhythm.timing_note}</div>
-        <div><strong>Supercompensation:</strong> {recovery.supercompensation.note}</div>
+        <div><strong>Range control:</strong> {recovery.range_control.target}</div>
+        <div><strong>Training dose:</strong> {recovery.training_dose.dose}</div>
+        <div><strong>Timing guidance:</strong> {recovery.timing_guidance.timing_note}</div>
+        <div><strong>Recovery rebound:</strong> {recovery.recovery_rebound.note}</div>
         <div><strong>Coaching tone:</strong> {recovery.coaching_tone}</div>
       </div>
 
@@ -651,9 +651,9 @@ function RecoveryDashboard({ recovery }: { recovery: AdaptiveRecovery }) {
       </div>
 
       <div className="delivery-box">
-        <div><strong>Nature model coverage</strong></div>
+        <div><strong>Decision signals</strong></div>
         <div className="feature-note-list">
-          {recovery.biological_signals.map((signal) => (
+          {recovery.adaptation_signals.map((signal) => (
             <span key={signal.model} className="feature-note-chip">{signal.model}</span>
           ))}
         </div>

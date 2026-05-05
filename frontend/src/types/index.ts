@@ -166,19 +166,19 @@ export interface AdaptiveRecovery {
   volume_multiplier: number
   rest_multiplier: number
   adjusted_duration_minutes: number
-  homeostasis: {
+  range_control: {
     status: string
     target: string
   }
-  hormesis: {
+  training_dose: {
     dose: string
     target: string
   }
-  circadian_rhythm: {
+  timing_guidance: {
     preferred_training_time: string
     timing_note: string
   }
-  supercompensation: {
+  recovery_rebound: {
     status: string
     note: string
   }
@@ -187,12 +187,12 @@ export interface AdaptiveRecovery {
     main_work: number
     recovery: number
   }
-  weakest_root: string
+  priority_limiter: string
   recovery_protocol: string
   safeguards: string[]
   micro_assessments: string[]
   coaching_tone: string
-  biological_signals: {
+  adaptation_signals: {
     model: string
     application: string
   }[]

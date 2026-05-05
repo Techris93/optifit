@@ -23,22 +23,22 @@ OptiFit is an AI-powered workout planner that uses Google's Gemini API to analyz
 - **Exercise Media** - 50+ exercises mapped to demo videos and GIFs
 - **Smart Fallbacks** - Template workouts when AI is unavailable
 
-### Nature-Inspired Training Intelligence
+### Readiness Intelligence
 
-OptiFit now copies biological operating systems instead of only generating static sessions:
+OptiFit now generates readiness-aware sessions instead of static workouts:
 
-- **Immune system** detects overtraining, injury risk, and poor recovery.
-- **Ant colonies** can recommend evidence-backed paths from users with similar readiness patterns.
-- **Mycelium networks** connect sleep, soreness, mood, nutrition, workout load, and missed sessions into one readiness view.
-- **Flocking birds** keep group or cohort training aligned through simple local readiness rules.
-- **Predator-prey cycles** vary sessions to break plateaus without overwhelming recovery.
-- **Skin** applies recovery-first safeguards as the outer barrier around hard training.
-- **Circadian rhythm** adapts training and recovery advice to the user's best time window.
-- **Tree roots** prioritize the weakest area first: sleep debt, tissue recovery, fuel, mobility, or focus area.
-- **Echolocation** asks short readiness checks before committing to the main workload.
-- **Octopus camouflage** adapts coaching tone to the user's recovery and motivation state.
+- **Recovery risk detection** identifies overtraining, injury risk, and poor recovery.
+- **Progression evidence** uses repeated successful sessions as confidence signals for future progressions.
+- **Readiness integration** connects sleep, soreness, mood, nutrition, workout load, and missed sessions into one view.
+- **Cohort scaling** keeps group or cohort training aligned through simple readiness rules.
+- **Plateau variation** changes sessions to break plateaus without overwhelming recovery.
+- **Safety guardrails** apply recovery-first safeguards around hard training.
+- **Training-window timing** adapts training and recovery advice to the user's best time window.
+- **Priority limiter** focuses on the weakest area first: sleep debt, tissue recovery, fuel, mobility, or focus area.
+- **Readiness checks** ask short questions before committing to the main workload.
+- **Coaching tone adaptation** adjusts coaching style to recovery and motivation state.
 
-Use it from the Workout Builder by filling the **Check Recovery** step before generating a workout. The response includes `adaptive_recovery` with readiness score, action state, volume/rest multipliers, recovery protocol, energy budget, micro-assessments, and the implemented biological signals.
+Use it from the Workout Builder by filling the **Check Recovery** step before generating a workout. The response includes `adaptive_recovery` with readiness score, action state, volume/rest multipliers, recovery protocol, energy budget, micro-assessments, and decision signals.
 
 ## 🚀 Quick Start
 
