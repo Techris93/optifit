@@ -8,6 +8,7 @@ import {
   Camera,
   ClipboardList,
   Dumbbell,
+  Moon,
   Sparkles,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
@@ -29,8 +30,13 @@ const steps = [
   },
   {
     icon: ClipboardList,
+    title: 'Check',
+    text: 'Add sleep, soreness, mood, fuel, load, and timing.',
+  },
+  {
+    icon: Sparkles,
     title: 'Generate',
-    text: 'Build a workout for your equipment and goals.',
+    text: 'Build a workout for your equipment, goals, and readiness.',
   },
   {
     icon: Dumbbell,
@@ -92,8 +98,8 @@ export default function Home() {
           </div>
           <h1 className="home-hero-title">Turn the equipment in front of you into a workout you can actually do.</h1>
           <p className="home-hero-text">
-            OptiFit helps you scan your gear, confirm the list, and generate a practical workout with exercise demos.
-            Train with what&apos;s around you.
+            OptiFit helps you scan your gear, confirm the list, check recovery signals, and generate a practical
+            workout with readiness-aware volume, rest, timing, coaching, and exercise demos.
           </p>
           <div className="home-hero-actions">
             <Link to={enableAnalyze ? '/analyze' : '/workouts'} className="home-hero-primary">
@@ -139,6 +145,16 @@ export default function Home() {
               </div>
             </Link>
           )}
+
+          <Link to="/workouts" className="home-quick-card">
+            <div className="home-quick-icon">
+              <Moon size={20} />
+            </div>
+            <div>
+              <strong>Adaptive Recovery</strong>
+              <p>Generate a workout from sleep, soreness, mood, fuel, load, and timing</p>
+            </div>
+          </Link>
 
           <Link to="/saved" className="home-quick-card">
             <div className="home-quick-icon">

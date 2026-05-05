@@ -38,12 +38,26 @@ optifit/
 - `POST /api/equipment/detect` accepts one `file` or multiple `files`
 - `/api/equipment/detect` can use local YOLO, OpenAI vision, or Gemini vision based on env config
 - `POST /api/workouts/generate` accepts JSON with `equipment` and optional `focus_areas`
+- `POST /api/workouts/generate` accepts optional recovery signals in `user_preferences`
 - Workout generation defaults to a lightweight template planner
+- Generated workouts pass through the Adaptive Recovery Engine before return
 - Ollama is optional and only used when `ENABLE_OLLAMA=true`
 - Generated workouts can now be persisted through `POST /api/workouts/save-generated`
 - Upload analysis is local-only by default unless fallback download is explicitly enabled
 - Progress logging works directly in the web UI
 - Production defaults now enforce a non-placeholder JWT secret, explicit CORS origins, rate limiting, and upload size caps
+
+## Adaptive Recovery Engine
+
+The workout builder now copies biological operating systems to make safer training decisions:
+
+- Sensing: sleep, soreness, mood, HRV trend, recent load, missed sessions, nutrition, timing, and focus areas
+- Memory-ready signals: similar-user paths, plateau variation, cohort scaling, and biological signal coverage
+- Adaptation: readiness score, action state, volume multiplier, rest multiplier, adjusted duration, and coaching tone
+- Containment: recovery-first safeguards when readiness drops
+- Regeneration: recovery protocol, energy budget, and micro-assessments before the main workload
+
+The frontend exposes this as the **Check Recovery** step in the Workout Builder and renders the returned `adaptive_recovery` dashboard under each generated plan.
 
 ## Running Locally
 
@@ -85,6 +99,7 @@ npm run dev
 ## Immediate Next Work
 
 1. Add richer saved-workout browsing and reuse flows in the web UI.
-2. Expand exercise media coverage for the deliver step.
-3. Improve local-only upload-analysis reliability without making hosted deploys depend on it.
-4. Add a PostgreSQL profile once the hosted MVP needs multi-instance or safer persistence.
+2. Persist adaptive recovery snapshots alongside saved workouts.
+3. Expand exercise media coverage for the deliver step.
+4. Improve local-only upload-analysis reliability without making hosted deploys depend on it.
+5. Add a PostgreSQL profile once the hosted MVP needs multi-instance or safer persistence.

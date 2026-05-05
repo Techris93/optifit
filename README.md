@@ -11,15 +11,34 @@ OptiFit is an AI-powered workout planner that uses Google's Gemini API to analyz
 
 1. **📸 Upload & Analyze** - Take photos of your gym equipment
 2. **✅ Confirm Equipment** - Review AI-detected items
-3. **🤖 Generate Workout** - AI creates a personalized plan
-4. **🎥 Watch & Learn** - Exercise demos with video/GIFs
+3. **🧬 Check Recovery** - Add sleep, soreness, mood, HRV trend, food, recent load, and training window
+4. **🤖 Generate Workout** - AI creates a personalized plan
+5. **🎥 Watch & Learn** - Exercise demos with video/GIFs
 
 ### AI-Powered Capabilities
 
 - **Equipment Detection** - Gemini Vision API analyzes gym photos
 - **Workout Generation** - Gemini creates personalized workout plans
+- **Adaptive Recovery Engine** - Adjusts volume, rest, timing, and coaching tone from readiness signals
 - **Exercise Media** - 50+ exercises mapped to demo videos and GIFs
 - **Smart Fallbacks** - Template workouts when AI is unavailable
+
+### Nature-Inspired Training Intelligence
+
+OptiFit now copies biological operating systems instead of only generating static sessions:
+
+- **Immune system** detects overtraining, injury risk, and poor recovery.
+- **Ant colonies** can recommend evidence-backed paths from users with similar readiness patterns.
+- **Mycelium networks** connect sleep, soreness, mood, nutrition, workout load, and missed sessions into one readiness view.
+- **Flocking birds** keep group or cohort training aligned through simple local readiness rules.
+- **Predator-prey cycles** vary sessions to break plateaus without overwhelming recovery.
+- **Skin** applies recovery-first safeguards as the outer barrier around hard training.
+- **Circadian rhythm** adapts training and recovery advice to the user's best time window.
+- **Tree roots** prioritize the weakest area first: sleep debt, tissue recovery, fuel, mobility, or focus area.
+- **Echolocation** asks short readiness checks before committing to the main workload.
+- **Octopus camouflage** adapts coaching tone to the user's recovery and motivation state.
+
+Use it from the Workout Builder by filling the **Check Recovery** step before generating a workout. The response includes `adaptive_recovery` with readiness score, action state, volume/rest multipliers, recovery protocol, energy budget, micro-assessments, and the implemented biological signals.
 
 ## 🚀 Quick Start
 
@@ -123,6 +142,7 @@ optifit/
 │   │   ├── services/
 │   │   │   ├── gemini_workout_service.py  # Gemini workout generation
 │   │   │   ├── workout_generator.py         # Main workout generator
+│   │   │   ├── recovery_engine.py           # Adaptive recovery engine
 │   │   │   ├── exercise_media_service.py    # Exercise demo mapping
 │   │   │   └── detection_service.py         # Equipment detection
 │   │   └── routers/
@@ -173,6 +193,29 @@ npm test
 | GET | `/api/workouts/exercises/{slug}/media` | Get exercise media |
 | GET | `/health` | Health check |
 | GET | `/readyz` | Readiness probe |
+
+### Adaptive Recovery Request Fields
+
+Pass recovery signals in `user_preferences` when calling `POST /api/workouts/generate`:
+
+```json
+{
+  "equipment": ["dumbbells", "bench"],
+  "focus_areas": ["legs"],
+  "user_preferences": {
+    "sleep_hours": 5.5,
+    "soreness": 7,
+    "mood": 2,
+    "hrv_trend": "down",
+    "recent_load": "high",
+    "missed_sessions": 1,
+    "preferred_training_time": "morning",
+    "nutrition": "under_fueled"
+  }
+}
+```
+
+The generated workout is automatically adjusted before it is returned, and the top-level response includes the same `adaptive_recovery` object for UI display or downstream coaching.
 
 ## 🤝 Contributing
 

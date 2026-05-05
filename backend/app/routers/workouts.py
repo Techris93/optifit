@@ -13,6 +13,7 @@ from app.routers.auth import get_optional_current_user
 from app.session_scope import require_request_scope
 from app.services.workout_generator import WorkoutGenerator
 from app.services.exercise_media_service import exercise_media_service
+from app.services.recovery_engine import apply_recovery_engine
 from app.services.workout_review import latest_reviews, review_workout_plan
 
 router = APIRouter()
@@ -330,6 +331,16 @@ async def generate_workout(
         focus_areas=payload.focus_areas,
         user_preferences=payload.user_preferences,
     )
+    recovery_result = apply_recovery_engine(
+        workout=workout_data,
+        goal=goal,
+        difficulty=difficulty,
+        duration_minutes=duration,
+        focus_areas=payload.focus_areas,
+        user_preferences=payload.user_preferences,
+    )
+    workout_data = recovery_result["workout"]
+    adaptive_recovery = recovery_result["adaptive_recovery"]
 
     available_equipment = {_normalize_slug(item) for item in payload.equipment} | {"bodyweight"}
     exercise_matches = []
@@ -389,6 +400,7 @@ async def generate_workout(
         "workout": workout_data,
         "exercise_matches": exercise_matches,
         "plan_review": plan_review,
+        "adaptive_recovery": adaptive_recovery,
         "generated_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         "equipment_used": payload.equipment,
         "ai_provider": workout_data.get("ai_provider", "template"),

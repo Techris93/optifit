@@ -31,6 +31,7 @@ export interface Workout {
   cooldown?: CooldownItem[]
   training_tips?: string[]
   estimated_calories_burned?: number
+  adaptive_recovery?: AdaptiveRecovery
 }
 
 export interface WarmupItem {
@@ -142,10 +143,59 @@ export interface WorkoutPrescription {
 export interface WorkoutGenerationResponse {
   workout: Workout
   exercise_matches: WorkoutExerciseMatch[]
+  plan_review?: WorkoutPlanReview
+  adaptive_recovery?: AdaptiveRecovery
   generated_at: string
   equipment_used: string[]
   ai_provider?: string
   generation_mode?: string
+}
+
+export interface WorkoutPlanReview {
+  review_id: string
+  generated_at: string
+  confidence: 'high' | 'medium' | 'low' | string
+  recommendations: string[]
+  safety_flags: string[]
+  report_path?: string
+}
+
+export interface AdaptiveRecovery {
+  readiness_score: number
+  action_state: 'regenerate' | 'restore' | 'build' | 'push' | string
+  volume_multiplier: number
+  rest_multiplier: number
+  adjusted_duration_minutes: number
+  homeostasis: {
+    status: string
+    target: string
+  }
+  hormesis: {
+    dose: string
+    target: string
+  }
+  circadian_rhythm: {
+    preferred_training_time: string
+    timing_note: string
+  }
+  supercompensation: {
+    status: string
+    note: string
+  }
+  energy_budgeting: {
+    warmup: number
+    main_work: number
+    recovery: number
+  }
+  weakest_root: string
+  recovery_protocol: string
+  safeguards: string[]
+  micro_assessments: string[]
+  coaching_tone: string
+  biological_signals: {
+    model: string
+    application: string
+  }[]
 }
 
 export interface SavedWorkoutSummary {
@@ -175,6 +225,14 @@ export interface UserPreferences {
   injuries?: string
   experience_years?: number
   preferred_style?: string
+  sleep_hours?: number
+  soreness?: number
+  mood?: number
+  hrv_trend?: string
+  recent_load?: string
+  missed_sessions?: number
+  preferred_training_time?: string
+  nutrition?: string
 }
 
 export interface HomeSummary {

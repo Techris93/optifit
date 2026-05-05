@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Clock, Dumbbell, RefreshCw, Save, Target } from 'lucide-react'
+import { Activity, Clock, Dumbbell, Moon, RefreshCw, Save, Target, Utensils } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
 import ExerciseAnimationCard from '../components/animation/ExerciseAnimationCard'
 import VisionStatusBadge from '../components/VisionStatusBadge'
 import { generateWorkout, getEquipmentTypes, saveGeneratedWorkout } from '../utils/api'
 import { buildGeneratedExerciseAnimationProfile } from '../data/exerciseAnimations'
-import type { WorkoutExerciseMatch, WorkoutGenerationResponse } from '../types'
+import type { AdaptiveRecovery, WorkoutExerciseMatch, WorkoutGenerationResponse } from '../types'
 
 type EquipmentCategory = {
   id: string
@@ -24,6 +24,14 @@ export default function WorkoutGenerator() {
   const [difficulty, setDifficulty] = useState('beginner')
   const [duration, setDuration] = useState(45)
   const [focusAreas, setFocusAreas] = useState<string[]>([])
+  const [sleepHours, setSleepHours] = useState(7)
+  const [soreness, setSoreness] = useState(3)
+  const [mood, setMood] = useState(3)
+  const [hrvTrend, setHrvTrend] = useState('flat')
+  const [recentLoad, setRecentLoad] = useState('moderate')
+  const [missedSessions, setMissedSessions] = useState(0)
+  const [preferredTrainingTime, setPreferredTrainingTime] = useState('flexible')
+  const [nutrition, setNutrition] = useState('unknown')
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -82,6 +90,16 @@ export default function WorkoutGenerator() {
         difficulty,
         duration,
         focus_areas: focusAreas,
+        user_preferences: {
+          sleep_hours: sleepHours,
+          soreness,
+          mood,
+          hrv_trend: hrvTrend,
+          recent_load: recentLoad,
+          missed_sessions: missedSessions,
+          preferred_training_time: preferredTrainingTime,
+          nutrition,
+        },
       })
       setResult(data)
     } catch (err) {
@@ -256,6 +274,140 @@ export default function WorkoutGenerator() {
             </div>
           </div>
 
+          <div className="card">
+            <div className="section-heading-row">
+              <div>
+                <div className="card-title zero-margin">3. Check Recovery</div>
+                <p className="card-subtitle">
+                  OptiFit uses these signals to adapt training stress, recovery, timing, and coaching tone.
+                </p>
+              </div>
+            </div>
+
+            <div className="preference-grid">
+              <div>
+                <label className="field-label">
+                  <Moon size={14} />
+                  Sleep: {sleepHours}h
+                </label>
+                <input
+                  type="range"
+                  min="3"
+                  max="10"
+                  step="0.5"
+                  value={sleepHours}
+                  onChange={(event) => setSleepHours(parseFloat(event.target.value))}
+                  className="range-control"
+                />
+              </div>
+
+              <div>
+                <label className="field-label">
+                  <Activity size={14} />
+                  Soreness: {soreness}/10
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="10"
+                  step="1"
+                  value={soreness}
+                  onChange={(event) => setSoreness(parseInt(event.target.value, 10))}
+                  className="range-control"
+                />
+              </div>
+
+              <div>
+                <label className="field-label">
+                  <Activity size={14} />
+                  Mood: {mood}/5
+                </label>
+                <input
+                  type="range"
+                  min="1"
+                  max="5"
+                  step="1"
+                  value={mood}
+                  onChange={(event) => setMood(parseInt(event.target.value, 10))}
+                  className="range-control"
+                />
+              </div>
+
+              <div>
+                <label className="field-label">
+                  <Utensils size={14} />
+                  Food and recovery
+                </label>
+                <select className="field-control" value={nutrition} onChange={(event) => setNutrition(event.target.value)}>
+                  <option value="unknown">Not sure</option>
+                  <option value="good">Well fueled</option>
+                  <option value="low">Low fuel</option>
+                  <option value="missed">Missed meal</option>
+                  <option value="poor">Poor recovery food</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="preference-grid top-gap-20">
+              <div>
+                <label className="field-label">HRV trend</label>
+                <div className="pill-row">
+                  {['down', 'flat', 'up'].map((trend) => (
+                    <button
+                      key={trend}
+                      type="button"
+                      className={`pill-button ${hrvTrend === trend ? 'active' : ''}`}
+                      onClick={() => setHrvTrend(trend)}
+                    >
+                      {trend}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="field-label">Recent load</label>
+                <div className="pill-row">
+                  {['low', 'moderate', 'high'].map((load) => (
+                    <button
+                      key={load}
+                      type="button"
+                      className={`pill-button ${recentLoad === load ? 'active' : ''}`}
+                      onClick={() => setRecentLoad(load)}
+                    >
+                      {load}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="preference-grid top-gap-20">
+              <div>
+                <label className="field-label">Missed sessions: {missedSessions}</label>
+                <input
+                  type="range"
+                  min="0"
+                  max="5"
+                  step="1"
+                  value={missedSessions}
+                  onChange={(event) => setMissedSessions(parseInt(event.target.value, 10))}
+                  className="range-control"
+                />
+              </div>
+
+              <div>
+                <label className="field-label">Training window</label>
+                <select className="field-control" value={preferredTrainingTime} onChange={(event) => setPreferredTrainingTime(event.target.value)}>
+                  <option value="flexible">Flexible</option>
+                  <option value="morning">Morning</option>
+                  <option value="afternoon">Afternoon</option>
+                  <option value="evening">Evening</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
           {error && <div className="card error-card">{error}</div>}
 
           <button className="btn btn-primary btn-large full-width" onClick={handleGenerate} disabled={loading}>
@@ -323,6 +475,7 @@ function WorkoutResult({
   onSave: () => Promise<void>
 }) {
   const { workout, exercise_matches: exerciseMatches } = result
+  const recovery = result.adaptive_recovery || workout.adaptive_recovery
 
   return (
     <div className="card workout-result-card">
@@ -359,6 +512,8 @@ function WorkoutResult({
           </span>
         ))}
       </div>
+
+      {recovery && <RecoveryDashboard recovery={recovery} />}
 
       {workout.training_tips && workout.training_tips.length > 0 && (
         <div className="delivery-box">
@@ -435,6 +590,75 @@ function WorkoutResult({
         </button>
       </div>
     </div>
+  )
+}
+
+function RecoveryDashboard({ recovery }: { recovery: AdaptiveRecovery }) {
+  return (
+    <section className="result-section">
+      <div className="section-heading-row">
+        <div>
+          <h3>Adaptive Recovery Engine</h3>
+          <p className="muted-paragraph">
+            Readiness-driven stress, recovery, timing, and coaching adjustments are applied before the session starts.
+          </p>
+        </div>
+        <div className="result-badges">
+          <span className="status-badge">{recovery.action_state.replace(/_/g, ' ')}</span>
+          <span className="status-badge secondary">{recovery.readiness_score}/100</span>
+        </div>
+      </div>
+
+      <div className="feature-stat-strip">
+        <div className="feature-stat-chip">
+          <strong>{Math.round(recovery.volume_multiplier * 100)}%</strong>
+          <span>Volume</span>
+        </div>
+        <div className="feature-stat-chip">
+          <strong>{Math.round(recovery.rest_multiplier * 100)}%</strong>
+          <span>Rest</span>
+        </div>
+        <div className="feature-stat-chip">
+          <strong>{recovery.weakest_root}</strong>
+          <span>Weakest root</span>
+        </div>
+      </div>
+
+      <div className="delivery-box">
+        <div><strong>Homeostasis:</strong> {recovery.homeostasis.target}</div>
+        <div><strong>Hormesis:</strong> {recovery.hormesis.dose}</div>
+        <div><strong>Circadian timing:</strong> {recovery.circadian_rhythm.timing_note}</div>
+        <div><strong>Supercompensation:</strong> {recovery.supercompensation.note}</div>
+        <div><strong>Coaching tone:</strong> {recovery.coaching_tone}</div>
+      </div>
+
+      <div className="delivery-box">
+        <div><strong>Energy budget</strong></div>
+        <div className="feature-note-list">
+          <span className="feature-note-chip">Warm-up {recovery.energy_budgeting.warmup}%</span>
+          <span className="feature-note-chip">Main work {recovery.energy_budgeting.main_work}%</span>
+          <span className="feature-note-chip">Recovery {recovery.energy_budgeting.recovery}%</span>
+        </div>
+      </div>
+
+      <div className="delivery-box">
+        <div><strong>Short readiness checks</strong></div>
+        <div className="feature-note-list">
+          {recovery.micro_assessments.map((assessment) => (
+            <span key={assessment} className="feature-note-chip">{assessment}</span>
+          ))}
+        </div>
+      </div>
+
+      <div className="delivery-box">
+        <div><strong>Nature model coverage</strong></div>
+        <div className="feature-note-list">
+          {recovery.biological_signals.map((signal) => (
+            <span key={signal.model} className="feature-note-chip">{signal.model}</span>
+          ))}
+        </div>
+      </div>
+    </section>
   )
 }
 

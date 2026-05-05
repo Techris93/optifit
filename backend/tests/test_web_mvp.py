@@ -36,8 +36,41 @@ def test_generate_workout_returns_template_payload(client):
     assert len(payload["exercise_matches"]) >= 1
     assert payload["plan_review"]["confidence"] in {"high", "medium", "low"}
     assert payload["plan_review"]["report_path"]
+    assert payload["adaptive_recovery"]["readiness_score"] > 0
+    assert len(payload["adaptive_recovery"]["biological_signals"]) == 10
+    assert payload["workout"]["adaptive_recovery"]["action_state"] in {"regenerate", "restore", "build", "push"}
     assert all(match.get("exercise") is not None for match in payload["exercise_matches"])
     assert all((match.get("exercise_id") or 0) > 0 for match in payload["exercise_matches"])
+
+
+def test_generate_workout_adapts_to_poor_recovery_inputs(client):
+    response = client.post(
+        "/api/workouts/generate?goal=strength&difficulty=advanced&duration=60",
+        json={
+            "equipment": ["dumbbell", "yoga_mat"],
+            "focus_areas": ["legs"],
+            "user_preferences": {
+                "sleep_hours": 4.5,
+                "soreness": 8,
+                "mood": 2,
+                "hrv_trend": "down",
+                "recent_load": "high",
+                "missed_sessions": 0,
+                "preferred_training_time": "evening",
+                "nutrition": "low",
+            },
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    recovery = payload["adaptive_recovery"]
+    assert recovery["action_state"] == "regenerate"
+    assert recovery["volume_multiplier"] < 1
+    assert recovery["rest_multiplier"] > 1
+    assert recovery["weakest_root"] in {"tissue recovery", "sleep debt", "fuel availability", "legs"}
+    assert recovery["micro_assessments"]
+    assert any(signal["model"] == "Octopus camouflage" for signal in recovery["biological_signals"])
+    assert any("Recovery adjusted" in match["notes"] for match in payload["exercise_matches"])
 
 
 def test_generate_workout_auto_backfills_missing_template_labels(client):

@@ -44,6 +44,13 @@ OptiFit is committed to protecting your privacy. This Privacy Policy explains ho
 - **Backup:** Optional export to your own server
 - **Sharing:** Only if you explicitly choose to share
 
+### Recovery Readiness Signals
+- **What:** Optional sleep hours, soreness, mood, HRV trend, recent load, missed sessions, preferred training time, and nutrition status
+- **Why:** To adapt workout volume, rest, duration, timing, safeguards, and coaching tone
+- **Where:** Processed by your app or self-hosted backend when generating a workout
+- **Storage:** Included only in generated workout flows and saved only if your deployment persists the generated plan or request data
+- **Sharing:** Not shared by OptiFit; if you enable a cloud AI provider, your backend may send relevant workout context to that provider under your configuration
+
 ## Self-Hosted Backend (Optional)
 
 If you connect to a self-hosted OptiFit backend:
@@ -64,6 +71,7 @@ We use the following open source libraries:
 - No Firebase
 - No Facebook SDK
 - No advertising networks
+- Optional Gemini or OpenAI calls only when you configure those providers on your own backend
 
 ## Your Rights
 

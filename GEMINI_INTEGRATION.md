@@ -9,6 +9,8 @@ OptiFit uses Gemini in two main ways:
 1. **Gemini Vision API** - Analyzes gym equipment photos
 2. **Gemini Text API** - Generates personalized workout plans
 
+After Gemini returns a plan, OptiFit's Adaptive Recovery Engine can adjust volume, rest, duration, timing, safeguards, and coaching tone from readiness signals before the response reaches the frontend.
+
 ## Architecture
 
 ```
@@ -47,6 +49,7 @@ ENABLE_GEMINI_WORKOUT=true
 The service sends a detailed prompt to Gemini including:
 - Client profile (goal, difficulty, equipment)
 - Exercise selection guidelines
+- Optional user preferences such as injuries, training experience, style, and recovery context
 - Required JSON output format
 - Safety rules and constraints
 
@@ -150,7 +153,14 @@ Content-Type: application/json
   "focus_areas": ["chest", "back"],
   "user_preferences": {
     "experience_years": 2,
-    "preferred_style": "hypertrophy"
+    "preferred_style": "hypertrophy",
+    "sleep_hours": 6,
+    "soreness": 5,
+    "mood": 3,
+    "hrv_trend": "stable",
+    "recent_load": "normal",
+    "preferred_training_time": "evening",
+    "nutrition": "adequate"
   }
 }
 
@@ -159,6 +169,8 @@ Query Parameters:
   - difficulty: beginner | intermediate | advanced
   - duration: 15-120 (minutes)
 ```
+
+The response includes `adaptive_recovery` with readiness score, action state, volume/rest multipliers, recovery protocol, energy budget, micro-assessments, and biological signal coverage.
 
 ### Equipment Detection
 
