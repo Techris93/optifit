@@ -1,5 +1,5 @@
 import { Routes, Route, NavLink, Navigate, Link } from 'react-router-dom'
-import { Activity, Archive, BarChart3, Camera, Dumbbell, Home as HomeIcon } from 'lucide-react'
+import { Activity, Archive, BarChart3, BookOpen, Camera, ClipboardList, Home as HomeIcon } from 'lucide-react'
 import { enableAnalyze } from './config'
 import Home from './pages/Home'
 import EquipmentScan from './pages/EquipmentScan'
@@ -47,11 +47,11 @@ function App() {
             <span>Home</span>
           </NavLink>
           <NavLink to="/workouts" className={({ isActive }) => `tab-link${isActive ? ' active' : ''}`}>
-            <Activity size={22} />
+            <ClipboardList size={22} />
             <span>Workouts</span>
           </NavLink>
           <NavLink to="/exercises" className={({ isActive }) => `tab-link${isActive ? ' active' : ''}`}>
-            <Dumbbell size={22} />
+            <BookOpen size={22} />
             <span>Exercises</span>
           </NavLink>
           <NavLink to="/progress" className={({ isActive }) => `tab-link${isActive ? ' active' : ''}`}>

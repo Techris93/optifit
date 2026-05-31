@@ -34,7 +34,7 @@ const steps = [
     text: 'Add sleep, soreness, mood, fuel, load, and timing.',
   },
   {
-    icon: Sparkles,
+    icon: ClipboardList,
     title: 'Generate',
     text: 'Build a workout for your equipment, goals, and readiness.',
   },
@@ -99,7 +99,8 @@ export default function Home() {
           <h1 className="home-hero-title">Turn the equipment in front of you into a workout you can actually do.</h1>
           <p className="home-hero-text">
             OptiFit helps you scan your gear, confirm the list, check recovery signals, and generate a practical
-            workout with readiness-aware volume, rest, timing, coaching, and exercise demos.
+            workout with readiness-aware volume, rest, timing, coaching, and exercise demos. Train with what&apos;s
+            around you.
           </p>
           <div className="home-hero-actions">
             <Link to={enableAnalyze ? '/analyze' : '/workouts'} className="home-hero-primary">
