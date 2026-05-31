@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field, model_validator
 from typing import List, Optional
@@ -89,7 +89,9 @@ async def log_progress(
 async def get_progress_history(
     request: Request,
     exercise_id: Optional[int] = None,
-    days: int = 30,
+    days: int = Query(30, ge=1, le=366),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
     db: Session = Depends(get_db),
     current_user: User | None = Depends(get_optional_current_user),
 ):
@@ -108,7 +110,12 @@ async def get_progress_history(
     cutoff = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=days)
     query = query.filter(ProgressEntry.created_at >= cutoff)
     
-    entries = query.order_by(ProgressEntry.created_at.desc()).all()
+    entries = (
+        query.order_by(ProgressEntry.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
     exercise_names = {}
     if entries:
         exercise_ids = list({entry.exercise_id for entry in entries})
@@ -122,7 +129,8 @@ async def get_progress_history(
     return {
         "entries": [_serialize_progress_entry(entry, exercise_names.get(entry.exercise_id)) for entry in entries],
         "total_volume": calculate_total_volume(entries),
-        "consistency": calculate_consistency(entries, days)
+        "consistency": calculate_consistency(entries, days),
+        "pagination": {"skip": skip, "limit": limit, "returned": len(entries)},
     }
 
 def calculate_total_volume(entries: List[ProgressEntry]) -> dict:
@@ -155,6 +163,9 @@ def calculate_consistency(entries: List[ProgressEntry], days: int) -> dict:
 async def get_exercise_progress(
     exercise_id: int,
     request: Request,
+    days: int = Query(366, ge=1, le=3660),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(500, ge=1, le=1000),
     db: Session = Depends(get_db),
     current_user: User | None = Depends(get_optional_current_user),
 ):
@@ -170,7 +181,15 @@ async def get_exercise_progress(
         query = query.filter(ProgressEntry.user_id == scope.user_id)
     else:
         query = query.filter(ProgressEntry.guest_session_id == scope.guest_session_id)
-    entries = query.order_by(ProgressEntry.created_at).all()
+    from datetime import timedelta
+    cutoff = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=days)
+    entries = (
+        query.filter(ProgressEntry.created_at >= cutoff)
+        .order_by(ProgressEntry.created_at)
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
     
     # Calculate 1RM estimates using Epley formula
     one_rm_data = []
@@ -190,5 +209,6 @@ async def get_exercise_progress(
     return {
         "exercise_id": exercise_id,
         "entries": entries,
-        "one_rm_progression": one_rm_data
+        "one_rm_progression": one_rm_data,
+        "pagination": {"skip": skip, "limit": limit, "returned": len(entries)},
     }

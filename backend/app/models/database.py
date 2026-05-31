@@ -1,16 +1,44 @@
 import os
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Table, Text, create_engine
+from sqlalchemy import JSON, Boolean, Column, DateTime, Float, ForeignKey, Index, Integer, String, Table, Text, create_engine, event
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 
 Base = declarative_base()
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./optifit.db")
 
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {},
-)
+
+def _engine_options() -> dict:
+    if DATABASE_URL.startswith("sqlite"):
+        return {
+            "connect_args": {
+                "check_same_thread": False,
+                "timeout": int(os.getenv("SQLITE_BUSY_TIMEOUT_SECONDS", "15")),
+            },
+        }
+
+    return {
+        "pool_pre_ping": True,
+        "pool_size": int(os.getenv("DB_POOL_SIZE", "5")),
+        "max_overflow": int(os.getenv("DB_MAX_OVERFLOW", "10")),
+        "pool_recycle": int(os.getenv("DB_POOL_RECYCLE_SECONDS", "1800")),
+    }
+
+
+engine = create_engine(DATABASE_URL, **_engine_options())
+
+
+if DATABASE_URL.startswith("sqlite"):
+    @event.listens_for(engine, "connect")
+    def _set_sqlite_pragmas(dbapi_connection, _connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys = ON")
+        cursor.execute(f"PRAGMA busy_timeout = {int(os.getenv('SQLITE_BUSY_TIMEOUT_SECONDS', '15')) * 1000}")
+        cursor.execute("PRAGMA journal_mode = WAL")
+        cursor.execute("PRAGMA synchronous = NORMAL")
+        cursor.close()
+
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Association tables
@@ -22,14 +50,17 @@ workout_exercises = Table(
     Column('sets', Integer, default=3),
     Column('reps', String, default="10"),
     Column('rest_seconds', Integer, default=60),
-    Column('order', Integer, default=0)
+    Column('order', Integer, default=0),
+    Index('idx_workout_exercises_workout_order', 'workout_id', 'order'),
+    Index('idx_workout_exercises_exercise', 'exercise_id'),
 )
 
 user_equipment = Table(
     'user_equipment',
     Base.metadata,
     Column('user_id', Integer, ForeignKey('users.id')),
-    Column('equipment_id', Integer, ForeignKey('equipment_types.id'))
+    Column('equipment_id', Integer, ForeignKey('equipment_types.id')),
+    Index('idx_user_equipment_equipment', 'equipment_id'),
 )
 
 class User(Base):
@@ -105,7 +136,8 @@ exercise_equipment = Table(
     'exercise_equipment',
     Base.metadata,
     Column('exercise_id', Integer, ForeignKey('exercises.id')),
-    Column('equipment_id', Integer, ForeignKey('equipment_types.id'))
+    Column('equipment_id', Integer, ForeignKey('equipment_types.id')),
+    Index('idx_exercise_equipment_equipment', 'equipment_id'),
 )
 
 # Backward-compatible alias for older imports.
@@ -113,6 +145,11 @@ ExerciseEquipment = exercise_equipment
 
 class Workout(Base):
     __tablename__ = "workouts"
+    __table_args__ = (
+        Index("idx_workouts_user_created", "user_id", "created_at"),
+        Index("idx_workouts_guest_created", "guest_session_id", "created_at"),
+        Index("idx_workouts_template_goal_created", "is_template", "goal", "created_at"),
+    )
     
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
@@ -135,6 +172,12 @@ class Workout(Base):
 
 class ProgressEntry(Base):
     __tablename__ = "progress_entries"
+    __table_args__ = (
+        Index("idx_progress_user_created", "user_id", "created_at"),
+        Index("idx_progress_guest_created", "guest_session_id", "created_at"),
+        Index("idx_progress_user_exercise_created", "user_id", "exercise_id", "created_at"),
+        Index("idx_progress_guest_exercise_created", "guest_session_id", "exercise_id", "created_at"),
+    )
     
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
@@ -159,6 +202,9 @@ class ProgressEntry(Base):
 
 class EquipmentScan(Base):
     __tablename__ = "equipment_scans"
+    __table_args__ = (
+        Index("idx_equipment_scans_user_created", "user_id", "created_at"),
+    )
     
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))

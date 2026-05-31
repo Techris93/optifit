@@ -6,7 +6,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.models.database import EquipmentType, Exercise, User, Workout, get_db, workout_exercises
 from app.routers.auth import get_optional_current_user
@@ -100,6 +100,20 @@ def _serialize_exercise(exercise: Exercise, prescription: dict | None = None) ->
         base_data["prescription"] = prescription
 
     return base_data
+
+
+def _serialize_workout_summary(workout: Workout) -> dict:
+    return {
+        "id": workout.id,
+        "name": workout.name,
+        "description": workout.description,
+        "goal": workout.goal,
+        "difficulty": workout.difficulty,
+        "estimated_duration_minutes": workout.estimated_duration_minutes,
+        "equipment_used": workout.equipment_used,
+        "created_at": workout.created_at,
+        "is_template": workout.is_template,
+    }
 
 
 EXERCISE_ALIASES = {
@@ -434,12 +448,23 @@ async def save_generated_workout(
     db.refresh(workout)
 
     saved_exercise_count = 0
+    match_ids = {match.exercise_id for match in payload.exercise_matches if match.exercise_id}
+    match_slugs = {match.slug for match in payload.exercise_matches if match.slug}
+    exercises_by_id = {
+        exercise.id: exercise
+        for exercise in db.query(Exercise).filter(Exercise.id.in_(match_ids)).all()
+    } if match_ids else {}
+    exercises_by_slug = {
+        exercise.slug: exercise
+        for exercise in db.query(Exercise).filter(Exercise.slug.in_(match_slugs)).all()
+    } if match_slugs else {}
+
     for order, match in enumerate(payload.exercise_matches):
         exercise = None
         if match.exercise_id:
-            exercise = db.query(Exercise).filter(Exercise.id == match.exercise_id).first()
+            exercise = exercises_by_id.get(match.exercise_id)
         if exercise is None:
-            exercise = db.query(Exercise).filter(Exercise.slug == match.slug).first()
+            exercise = exercises_by_slug.get(match.slug)
         if exercise is None:
             continue
 
@@ -473,8 +498,8 @@ async def save_generated_workout(
 @router.get("/")
 async def get_workouts(
     request: Request,
-    skip: int = 0,
-    limit: int = 20,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user: User | None = Depends(get_optional_current_user),
 ):
@@ -486,13 +511,15 @@ async def get_workouts(
         .limit(limit)
         .all()
     )
-    return workouts
+    return [_serialize_workout_summary(workout) for workout in workouts]
 
 
 @router.get("/templates/community")
 async def get_community_templates(
     equipment: Optional[List[str]] = None,
     goal: Optional[str] = None,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=50),
     db: Session = Depends(get_db)
 ):
     """Get community-created workout templates."""
@@ -504,8 +531,8 @@ async def get_community_templates(
     if equipment:
         query = query.filter(Workout.equipment_used.is_not(None))
 
-    templates = query.limit(20).all()
-    return templates
+    templates = query.order_by(Workout.created_at.desc()).offset(skip).limit(limit).all()
+    return [_serialize_workout_summary(template) for template in templates]
 
 
 @router.get("/reviews/latest")
@@ -522,7 +549,12 @@ async def get_workout(
     current_user: User | None = Depends(get_optional_current_user),
 ):
     """Get a specific workout with enriched exercise data."""
-    workout = _scoped_workout_query(db, request, current_user).filter(Workout.id == workout_id).first()
+    workout = (
+        _scoped_workout_query(db, request, current_user)
+        .options(selectinload(Workout.exercises).selectinload(Exercise.equipment))
+        .filter(Workout.id == workout_id)
+        .first()
+    )
     if not workout:
         raise HTTPException(404, "Workout not found")
 
@@ -587,10 +619,12 @@ async def search_exercises(
     query: str,
     muscle_group: Optional[str] = None,
     difficulty: Optional[str] = None,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=50),
     db: Session = Depends(get_db)
 ):
     """Search exercises with media enrichment."""
-    db_query = db.query(Exercise)
+    db_query = db.query(Exercise).options(selectinload(Exercise.equipment))
 
     if query:
         db_query = db_query.filter(
@@ -604,6 +638,6 @@ async def search_exercises(
     if difficulty:
         db_query = db_query.filter(Exercise.difficulty == difficulty)
 
-    exercises = db_query.limit(20).all()
+    exercises = db_query.order_by(Exercise.name.asc()).offset(skip).limit(limit).all()
 
     return [_serialize_exercise(ex) for ex in exercises]

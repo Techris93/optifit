@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from typing import List, Optional
 
 from app.models.database import get_db, Exercise
@@ -33,7 +33,7 @@ async def list_equipment_types(db: Session = Depends(get_db)):
     """List all equipment types in the database."""
     from app.models.database import EquipmentType
 
-    equipment = db.query(EquipmentType).all()
+    equipment = db.query(EquipmentType).order_by(EquipmentType.name.asc()).limit(100).all()
     return {
         "equipment": [
             {
@@ -48,8 +48,8 @@ async def list_equipment_types(db: Session = Depends(get_db)):
 
 @router.get("/")
 async def list_exercises(
-    skip: int = 0,
-    limit: int = 50,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
     muscle_group: Optional[str] = None,
     equipment: Optional[str] = None,
     difficulty: Optional[str] = Query(None, enum=["beginner", "intermediate", "advanced"]),
@@ -64,10 +64,19 @@ async def list_exercises(
             query=search,
             muscle_group=muscle_group,
             equipment=equipment,
-            difficulty=difficulty
+            difficulty=difficulty,
+            skip=skip,
+            limit=limit,
         )
     else:
-        exercises = db.query(Exercise).offset(skip).limit(limit).all()
+        exercises = (
+            db.query(Exercise)
+            .options(selectinload(Exercise.equipment))
+            .order_by(Exercise.name.asc())
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
     
     return {
         "exercises": exercises,
@@ -80,6 +89,7 @@ async def list_exercises(
 async def get_alternatives(
     exercise_slug: str,
     available_equipment: Optional[List[str]] = None,
+    limit: int = Query(10, ge=1, le=25),
     db: Session = Depends(get_db)
 ):
     """Get alternative exercises for the same muscle group."""
@@ -90,7 +100,14 @@ async def get_alternatives(
         raise HTTPException(404, "Exercise not found")
 
     target_groups = exercise.muscle_groups or []
-    candidates = db.query(Exercise).filter(Exercise.id != exercise.id).all()
+    candidates = (
+        db.query(Exercise)
+        .options(selectinload(Exercise.equipment))
+        .filter(Exercise.id != exercise.id)
+        .order_by(Exercise.name.asc())
+        .limit(250)
+        .all()
+    )
     alternatives = [candidate for candidate in candidates if _shares_muscle_group(candidate, target_groups)]
 
     # Filter by available equipment if provided
@@ -102,7 +119,7 @@ async def get_alternatives(
 
     return {
         "original": exercise,
-        "alternatives": alternatives[:10],
+        "alternatives": alternatives[:limit],
     }
 
 @router.get("/{exercise_slug}")

@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS exercise_equipment (
 CREATE TABLE IF NOT EXISTS workouts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER,
+    guest_session_id TEXT,
     name TEXT NOT NULL,
     description TEXT,
     goal TEXT,
@@ -94,7 +95,8 @@ CREATE TABLE IF NOT EXISTS user_equipment (
 -- Progress Tracking
 CREATE TABLE IF NOT EXISTS progress_entries (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
+    user_id INTEGER,
+    guest_session_id TEXT,
     workout_id INTEGER,
     exercise_id INTEGER NOT NULL,
     sets_completed INTEGER,
@@ -121,7 +123,20 @@ CREATE TABLE IF NOT EXISTS equipment_scans (
 
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_exercises_slug ON exercises(slug);
+CREATE INDEX IF NOT EXISTS idx_exercises_name ON exercises(name);
 CREATE INDEX IF NOT EXISTS idx_exercises_muscles ON exercises(muscle_groups);
+CREATE INDEX IF NOT EXISTS idx_exercise_equipment_equipment ON exercise_equipment(equipment_id);
+CREATE INDEX IF NOT EXISTS idx_workout_exercises_workout_order ON workout_exercises(workout_id, "order");
+CREATE INDEX IF NOT EXISTS idx_workout_exercises_exercise ON workout_exercises(exercise_id);
+CREATE INDEX IF NOT EXISTS idx_user_equipment_equipment ON user_equipment(equipment_id);
 CREATE INDEX IF NOT EXISTS idx_progress_user ON progress_entries(user_id);
 CREATE INDEX IF NOT EXISTS idx_progress_exercise ON progress_entries(exercise_id);
+CREATE INDEX IF NOT EXISTS idx_progress_user_created ON progress_entries(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_progress_guest_created ON progress_entries(guest_session_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_progress_user_exercise_created ON progress_entries(user_id, exercise_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_progress_guest_exercise_created ON progress_entries(guest_session_id, exercise_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_workouts_user ON workouts(user_id);
+CREATE INDEX IF NOT EXISTS idx_workouts_user_created ON workouts(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_workouts_guest_created ON workouts(guest_session_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_workouts_template_goal_created ON workouts(is_template, goal, created_at);
+CREATE INDEX IF NOT EXISTS idx_equipment_scans_user_created ON equipment_scans(user_id, created_at);

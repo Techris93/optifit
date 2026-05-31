@@ -53,6 +53,12 @@ def reconcile_runtime_schema() -> None:
                     text("ALTER TABLE workout_exercises ALTER COLUMN reps TYPE VARCHAR USING reps::varchar")
                 )
 
+    for table in Base.metadata.sorted_tables:
+        if table.name not in table_names:
+            continue
+        for index in table.indexes:
+            index.create(bind=engine, checkfirst=True)
+
 app = FastAPI(
     title="OptiFit API",
     description="Open source AI workout planner",

@@ -99,6 +99,10 @@ The repository includes `render.yaml` for one-click deployment:
 
 See [DEPLOY.md](DEPLOY.md) for detailed deployment instructions.
 
+## 📈 Production Database Scale
+
+See [DATABASE_SCALE_AUDIT.md](DATABASE_SCALE_AUDIT.md) for the database scalability audit covering N+1 queries, pagination, indexes, connection pooling/lifecycle, and over-fetching fixes.
+
 ## 🔧 Configuration
 
 ### Environment Variables

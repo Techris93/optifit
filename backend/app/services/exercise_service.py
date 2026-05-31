@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from sqlalchemy.orm import selectinload
 from app.models.database import EquipmentType, Exercise, ExerciseEquipment
 from typing import List
 
@@ -24,7 +25,7 @@ class ExerciseService:
         ]
         
         # Get exercises matching equipment
-        exercises = self.db.query(Exercise).join(
+        exercises = self.db.query(Exercise).options(selectinload(Exercise.equipment)).join(
             ExerciseEquipment
         ).filter(
             ExerciseEquipment.c.equipment_id.in_(equipment_ids)
@@ -35,17 +36,19 @@ class ExerciseService:
         return exercises
     
     def get_exercise_by_slug(self, slug: str) -> Exercise:
-        return self.db.query(Exercise).filter(Exercise.slug == slug).first()
+        return self.db.query(Exercise).options(selectinload(Exercise.equipment)).filter(Exercise.slug == slug).first()
     
     def search_exercises(
         self, 
         query: str = None,
         muscle_group: str = None,
         equipment: str = None,
-        difficulty: str = None
+        difficulty: str = None,
+        skip: int = 0,
+        limit: int = 50,
     ) -> List[Exercise]:
         """Search exercises with filters."""
-        q = self.db.query(Exercise)
+        q = self.db.query(Exercise).options(selectinload(Exercise.equipment))
         
         if query:
             q = q.filter(Exercise.name.ilike(f"%{query}%"))
@@ -56,7 +59,8 @@ class ExerciseService:
         if difficulty:
             q = q.filter(Exercise.difficulty == difficulty)
 
-        exercises = q.all()
+        db_limit = min(max(limit * 5 if muscle_group else limit, limit), 250)
+        exercises = q.offset(skip if not muscle_group else 0).limit(db_limit).all()
 
         if muscle_group:
             exercises = [
@@ -64,5 +68,6 @@ class ExerciseService:
                 for exercise in exercises
                 if muscle_group in (exercise.muscle_groups or [])
             ]
+            exercises = exercises[skip : skip + limit]
 
         return exercises

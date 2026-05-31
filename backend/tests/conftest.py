@@ -7,6 +7,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 os.environ.setdefault("DATABASE_URL", "sqlite:///./optifit_test_bootstrap.db")
+# Keep workout-generation tests deterministic even when a developer has provider keys in the shell.
+os.environ["ENABLE_GEMINI_WORKOUT"] = "false"
 
 from app.main import app
 from app.models.database import Base, Exercise, EquipmentType, Workout, get_db

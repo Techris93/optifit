@@ -122,6 +122,41 @@ def test_save_generated_workout_persists_record(client):
     assert any(workout["id"] == saved["id"] for workout in workouts)
 
 
+def test_saved_workout_list_is_paginated(client):
+    for index in range(3):
+        save_response = client.post(
+            "/api/workouts/save-generated",
+            json={
+                "name": f"Paged Save {index}",
+                "description": "Used to verify bounded saved workout lists.",
+                "goal": "strength",
+                "difficulty": "beginner",
+                "estimated_duration_minutes": 30,
+                "equipment_used": ["dumbbell"],
+                "exercise_matches": [
+                    {
+                        "exercise_id": 2,
+                        "slug": "dumbbell_rows",
+                        "sets": 3,
+                        "reps": "10-12",
+                        "rest_seconds": 60,
+                    }
+                ],
+            },
+            headers=CLIENT_SESSION_HEADERS,
+        )
+        assert save_response.status_code == 200
+
+    first_page = client.get("/api/workouts/?limit=2", headers=CLIENT_SESSION_HEADERS)
+    second_page = client.get("/api/workouts/?skip=2&limit=2", headers=CLIENT_SESSION_HEADERS)
+
+    assert first_page.status_code == 200
+    assert second_page.status_code == 200
+    assert len(first_page.json()) == 2
+    assert len(second_page.json()) == 1
+    assert "exercises" not in first_page.json()[0]
+
+
 def test_save_generated_workout_reports_inserted_exercise_count(client):
     save_response = client.post(
         "/api/workouts/save-generated",
@@ -315,6 +350,42 @@ def test_progress_history_is_scoped_to_guest_session(client):
     assert second_history.status_code == 200
     assert len(first_history.json()["entries"]) == 1
     assert len(second_history.json()["entries"]) == 0
+
+def test_progress_history_is_paginated(client):
+    for index in range(3):
+        response = client.post(
+            "/api/progress/log",
+            json={
+                "exercise_id": 1,
+                "sets_completed": 2,
+                "reps_per_set": [10 + index, 12 + index],
+                "weight_per_set": [0, 0],
+            },
+            headers=CLIENT_SESSION_HEADERS,
+        )
+        assert response.status_code == 200
+
+    history = client.get("/api/progress/history?days=30&limit=2", headers=CLIENT_SESSION_HEADERS)
+
+    assert history.status_code == 200
+    payload = history.json()
+    assert len(payload["entries"]) == 2
+    assert payload["pagination"] == {"skip": 0, "limit": 2, "returned": 2}
+
+
+def test_scale_indexes_are_declared_for_hot_paths():
+    from app.models.database import Base
+
+    index_names = {
+        index.name
+        for table in Base.metadata.tables.values()
+        for index in table.indexes
+    }
+
+    assert "idx_workouts_user_created" in index_names
+    assert "idx_workouts_guest_created" in index_names
+    assert "idx_progress_user_exercise_created" in index_names
+    assert "idx_exercise_equipment_equipment" in index_names
 
 
 def test_progress_accepts_guest_sessions_when_progress_auth_is_required(client):
